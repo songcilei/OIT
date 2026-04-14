@@ -1,0 +1,54 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+
+// RWTexture2D<float4> Result;
+TextureCube _cubemap;
+SamplerState sampler_cubemap;
+// StructuredBuffer<float3> normals;
+RWBuffer<float4> colors;
+float3 AxisNormal;
+RWBuffer<float4> rands; 
+
+#include "UnityCG.cginc"
+#include "Lighting.cginc"
+#include  "AutoLight.cginc"
+
+//切线空间转世界空间
+float3 TagnentToWorld(float3 tangent,float3 normal)
+{
+    float3 up = abs(normal.y)<0.999f?float3(0,1,0):float3(0,0,1);
+    float3 right = normalize(cross(up,normal));
+    up = normalize(cross(normal,right));
+    return tangent.x*right+tangent.y*up+tangent.z*normal;
+}
+
+
+//余弦加权采样
+float3 SampleHemisphereCosine(float2 rand)
+{
+    float phi = 2*3.1415926f*rand.x;
+    float cosTheta = sqrt(1-rand.y);
+    float sinTheta = sqrt(1-cosTheta*cosTheta);
+    return float3(cos(phi)*sinTheta,sin(phi)*sinTheta,cosTheta);
+}
+[numthreads(16,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    
+    int index = id.x ;
+    float3 rand = rands[index];
+    float3 samplePoint = SampleHemisphereCosine(rand.xy);//半球余弦加权采样
+    float3 normal_world = TagnentToWorld(samplePoint,AxisNormal);//切线空间转世界空间
+    float4 color = _cubemap.SampleLevel(sampler_cubemap, normal_world,0);
+    
+    float NdotDir = dot(normalize(AxisNormal),normal_world);//这里需要判断是否半球内采样 忽略背面 
+    if (NdotDir<0)
+    {
+        colors[id.x] = float4(0,0,0,0);//这里相当于无效参数
+    }else
+    {
+        colors[id.x] = color;
+    }
+}
+
