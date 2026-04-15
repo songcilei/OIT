@@ -4,6 +4,13 @@ using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
+public enum ComputeMode
+{
+    CPU,
+    GPU
+}
+
+
 public class AMCreateTool : MonoBehaviour
 {
     public Bounds bounds;
@@ -11,8 +18,9 @@ public class AMCreateTool : MonoBehaviour
     AMNode[,] node;
     public GameObject amNode;
     public List<GameObject> AMNodes;
-
+    public ComputeMode ComputeMode = ComputeMode.GPU;
     public bool Debug = true;
+    
     [Button(ButtonSizes.Gigantic)]
     public void Create()
     { 
@@ -55,7 +63,7 @@ public class AMCreateTool : MonoBehaviour
         foreach (var node in AMNodes)
         {
             AMNode nodeScript = node.GetComponent<AMNode>();
-            nodeScript.Bake();
+            nodeScript.Bake(ComputeMode);
         }
 
         foreach (var node in AMNodes)

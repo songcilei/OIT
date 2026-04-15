@@ -1,11 +1,10 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel CSMain
-
-
+#pragma kernel CSMainCPU
 // RWTexture2D<float4> Result;
 TextureCube _cubemap;
 SamplerState sampler_cubemap;
-// StructuredBuffer<float3> normals;
+StructuredBuffer<float3> normals;
 RWBuffer<float4> colors;
 float3 AxisNormal;
 RWBuffer<float4> rands; 
@@ -50,5 +49,13 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     {
         colors[id.x] = color;
     }
+}
+[numthreads(16,1,1)]
+void CSMainCPU(uint3 id : SV_DispatchThreadID)
+{
+    int index = id.x ;
+    float3 normal = normals[index];
+    float4 color = _cubemap.SampleLevel(sampler_cubemap, normal,0);
+    colors[id.x] = color;
 }
 

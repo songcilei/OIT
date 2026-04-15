@@ -7,17 +7,18 @@ public class AmbientCubeBaker
     /// <summary> 
     /// 蒙特卡洛卷积 Cubemap → 6 个纯色 Ambient Cube
     /// </summary>
-    public static AmbientCubeData BakeAmbientCube(Texture cubemap, ComputeShader cs, int sampleCount = 2048)
+    public static AmbientCubeData BakeAmbientCube(Texture cubemap, ComputeShader cs, ComputeMode mode,
+        int sampleCount = 2048)
     {
         AmbientCubeData data = new AmbientCubeData();
 
         // 6 个主轴方向
-        data.right   = ConvolveDirection(cubemap, Vector3.right,   sampleCount,cs);
-        data.left    = ConvolveDirection(cubemap, Vector3.left,    sampleCount,cs);
-        data.up      = ConvolveDirection(cubemap, Vector3.up,      sampleCount,cs);
-        data.down    = ConvolveDirection(cubemap, Vector3.down,    sampleCount,cs);
-        data.forward = ConvolveDirection(cubemap, Vector3.forward, sampleCount,cs);
-        data.back    = ConvolveDirection(cubemap, Vector3.back,    sampleCount,cs);
+        data.right = ConvolveDirection(mode, cubemap, Vector3.right, sampleCount, cs);
+        data.left = ConvolveDirection(mode, cubemap, Vector3.left, sampleCount, cs);
+        data.up = ConvolveDirection(mode, cubemap, Vector3.up, sampleCount, cs);
+        data.down = ConvolveDirection(mode, cubemap, Vector3.down, sampleCount, cs);
+        data.forward = ConvolveDirection(mode, cubemap, Vector3.forward, sampleCount, cs);
+        data.back = ConvolveDirection(mode, cubemap, Vector3.back, sampleCount, cs);
 
         return data;
     }
@@ -25,71 +26,75 @@ public class AmbientCubeBaker
     /// <summary>
     /// 对一个方向（法线）做蒙特卡洛半球卷积
     /// </summary>
-    static Vector3 ConvolveDirection(Texture cubemap, Vector3 normal, int sampleCount,ComputeShader cs
-    )
+    static Vector3 ConvolveDirection(ComputeMode mode, Texture cubemap, Vector3 normal, int sampleCount,
+        ComputeShader cs)
     {
 
-        // List<Vector3> dirs = new List<Vector3>();
-        List<Vector4> rands = new List<Vector4>();
-        for (int i = 0; i < sampleCount; i++)
+        if (mode == ComputeMode.GPU)
         {
-            // 1. 随机生成一个随机数
-            Vector2 rand = new Vector2(Random.value, Random.value);
-            rands.Add(new Vector4(rand.x, rand.y, 0, 0));
-        }
-        //这里将下列的计算都转移到了compute shader内
-        var colors = CSSampleCubemap(cs,cubemap,sampleCount,rands.ToArray(),normal);
-
-        int sampleC = 0;
-        Vector4 colorDetail = new Vector4(0,0,0,1);
-        for (int i = 0; i < colors.Length; i++)
-        {
-            if (colors[i].magnitude >0.01f)//这里之所以用 0.01 是因为半球中，某些方向的采样会很少
-            { 
-                colorDetail += colors[i];
-                sampleC++;
+            List<Vector4> rands = new List<Vector4>();
+            for (int i = 0; i < sampleCount; i++)
+            {
+                // 1. 随机生成一个随机数
+                Vector2 rand = new Vector2(Random.value, Random.value);
+                rands.Add(new Vector4(rand.x, rand.y, 0, 0));
             }
+
+            //这里将下列的计算都转移到了compute shader内
+            var colors = CSSampleCubemapGPU(cs, cubemap, sampleCount, rands.ToArray(), normal);
+
+            int sampleC = 0;
+            Vector4 colorDetail = new Vector4(0, 0, 0, 1);
+            for (int i = 0; i < colors.Length; i++)
+            {
+                if (colors[i].magnitude > 0.01f) //这里之所以用 0.01 是因为半球中，某些方向的采样会很少
+                {
+                    colorDetail += colors[i];
+                    sampleC++;
+                }
+            }
+
+            return colorDetail / sampleC;
         }
 
-        return colorDetail / sampleC;
 
-        // Vector3 color = Vector3.zero;
-        // int validSamples = 0;
-        //
-        // for (int i = 0; i < sampleCount; i++)
-        // {
-        //     // 1. 生成余弦分布随机方向（重要性采样，效果远好于均匀）
-        //     Vector2 rand = new Vector2(Random.value, Random.value);
-        //     Vector3 dir = SampleHemisphereCosine(rand);
-        //     
-        //     // 2. 切线空间转世界空间（围绕法线）
-        //     dir = TangentToWorld(dir, normal);
-        //     dirs.Add(dir);
-        // }
-        //
-        // var colors = CSSampleCubemap(cs,dirs.ToArray(),cubemap,sampleCount);
-        //
-        // var detailColor = Vector3.zero;
-        // int sCount = 0;
-        // for (int i = 0; i < dirs.Count; i++)
-        // {
-        //     // 3. 权重 n·l
-        //     float ndotl = Vector3.Dot(normal, dirs[i]);
-        //     if (ndotl <= 0) continue;
-        //
-        //     detailColor+= new Vector3(colors[i].x,colors[i].y,colors[i].z)*ndotl;
-        //
-        //     sCount++;
-        // }
-        //
-        // return detailColor / sCount;
+        if (mode == ComputeMode.CPU)
+        {
+            List<Vector3> dirs = new List<Vector3>();
+            Vector3 color = Vector3.zero;
+            int validSamples = 0;
 
+            for (int i = 0; i < sampleCount; i++)
+            {
+                // 1. 生成余弦分布随机方向（重要性采样，效果远好于均匀）
+                Vector2 rand = new Vector2(Random.value, Random.value);
+                Vector3 dir = SampleHemisphereCosine(rand);
 
+                // 2. 切线空间转世界空间（围绕法线）
+                dir = TangentToWorld(dir, normal);
+                dirs.Add(dir);
+            }
 
+            var colors = CSSampleCubemapCPU(cs, cubemap, dirs.ToArray(), sampleCount);
 
+            var detailColor = Vector3.zero;
+            int sCount = 0;
+            for (int i = 0; i < dirs.Count; i++)
+            {
+                // 3. 权重 n·l
+                float ndotl = Vector3.Dot(normal, dirs[i]);
+                if (ndotl <= 0) continue;
 
+                detailColor += new Vector3(colors[i].x, colors[i].y, colors[i].z) * ndotl;
 
+                sCount++;
+            }
 
+            return detailColor / sCount;
+        }
+
+        return Vector3.zero;
+        
         // for (int i = 0; i < sampleCount; i++)
         // {
         //     // 1. 生成余弦分布随机方向（重要性采样，效果远好于均匀）
@@ -115,9 +120,9 @@ public class AmbientCubeBaker
         //
         // return color / validSamples;
     }
-    
-    
-    /// <summary>
+
+
+/// <summary>
     /// 余弦加权半球采样（最重要！IBL标准采样）
     /// </summary>
     public static Vector3 SampleHemisphereCosine(Vector2 rand)
@@ -143,8 +148,8 @@ public class AmbientCubeBaker
         return tangent.x * right + tangent.y * up + tangent.z * normal;
     }
 
-
-     static private Vector4[] CSSampleCubemap(ComputeShader cs,Texture cubemap,int SampleCount,Vector4[] rands,Vector4 axisNormal)
+// 支持  全部  GPU运算 采样
+     static private Vector4[] CSSampleCubemapGPU(ComputeShader cs,Texture cubemap,int SampleCount,Vector4[] rands,Vector4 axisNormal)
     {
         if (cs == null) return null;
         // ComputeBuffer dirsBuffer = new ComputeBuffer(SampleCount, sizeof(float) * 3);
@@ -173,6 +178,29 @@ public class AmbientCubeBaker
         return normals;
     }
 
+    static private Vector4[] CSSampleCubemapCPU(ComputeShader cs,Texture cubemap,Vector3[] dirs,int SampleCount)
+    {
+        if (cs == null) return null;
+        ComputeBuffer dirsBuffer = new ComputeBuffer(SampleCount, sizeof(float) * 3);
+        ComputeBuffer resultBuffer = new ComputeBuffer(SampleCount, sizeof(float) * 4);
+        dirsBuffer.SetData(dirs);
+        
+        Vector4[] normals = new Vector4[SampleCount];
+        
+        
+        int kernelHandle = cs.FindKernel("CSMainCPU");
+        cs.SetTexture(kernelHandle,"_cubemap",cubemap);
+        cs.SetBuffer(kernelHandle,"normals",dirsBuffer);
+        cs.SetBuffer(kernelHandle,"colors",resultBuffer);
+        
+        cs.Dispatch(kernelHandle,(int)SampleCount/16,1,1);
+        
+        resultBuffer.GetData(normals);
+        
+        dirsBuffer.Release();
+        resultBuffer.Release();
+        return normals;
+    }
 
 }
 

@@ -13,9 +13,9 @@ public class AmbientSample : MonoBehaviour
     public Material debugMat;
     
     [Button]
-    public void Bake()
+    public void Bake(ComputeMode mode)
     {
-        data = AmbientCubeBaker.BakeAmbientCube(cubemap, cs);
+        data = AmbientCubeBaker.BakeAmbientCube(cubemap, cs,mode);
         Debug.Log("Up:"+data.up);
         Debug.Log("Down:"+data.down);
         Debug.Log("left:"+data.left);

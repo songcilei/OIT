@@ -13,7 +13,7 @@ public class AMNode : MonoBehaviour
     
     
     [Button]
-    public void Bake()
+    public void Bake(ComputeMode mode)
     {
 
         Debug.Log("bake!!!!!");
@@ -27,7 +27,7 @@ public class AMNode : MonoBehaviour
 
         
 //Compute ambient cube        
-        data = AmbientCubeBaker.BakeAmbientCube(cubemap, cs,4096);
+        data = AmbientCubeBaker.BakeAmbientCube(cubemap, cs,mode,4096);
 
 //set material
         MaterialPropertyBlock mpb = new MaterialPropertyBlock();
