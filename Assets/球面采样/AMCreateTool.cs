@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
+using Sirenix.Serialization;
 using UnityEngine;
 
 public enum ComputeMode
@@ -18,6 +19,9 @@ public class AMCreateTool : MonoBehaviour
     AMNode[,] node;
     public GameObject amNode;
     public List<GameObject> AMNodes;
+    public GameObject[,,] AM3DNodes;
+
+    public Material threeDMat;
     public ComputeMode ComputeMode = ComputeMode.GPU;
     public bool Debug = true;
     
@@ -29,7 +33,11 @@ public class AMCreateTool : MonoBehaviour
         int xLoop = (int)bounds.extents.x*2/resolution;
         int zLoop = (int)bounds.extents.z*2/resolution;
         int yLoop = (int)bounds.extents.y*2/resolution;
-
+        threeDMat.SetVector("_StartPos",startPos);
+        threeDMat.SetVector("_Range",new Vector4(xLoop,yLoop,zLoop,1));
+        threeDMat.SetVector("_Extent",bounds.extents*2);
+        threeDMat.SetFloat("_Resolution",resolution);
+        AM3DNodes = new GameObject[xLoop+1, yLoop+1, zLoop+1];
         for (int x = 0; x <= xLoop; x++)
         {
             for (int z = 0; z <= zLoop; z++)
@@ -39,10 +47,13 @@ public class AMCreateTool : MonoBehaviour
                     Vector3 pos = new Vector3(x*resolution,y*resolution,z*resolution)+startPos;
                     var node = Instantiate(amNode, pos, Quaternion.identity, this.transform);
                     AMNodes.Add(node);
+                    // UnityEngine.Debug.Log(x+"::"+y+"::"+z);
+                    AM3DNodes[x,y,z] = node;
                 }
             }
         }
 
+        UnityEngine.Debug.Log("finish!!!!");
         /*
         foreach (var node in AMNodes)
         {
@@ -84,6 +95,43 @@ public class AMCreateTool : MonoBehaviour
         AMNodes.Clear();
         
     }
+    
+    
+    [Button(ButtonSizes.Gigantic)]
+    public void Save3DTexture()
+    {
+        int xloop = AM3DNodes.GetLength(0);
+        int yloop = AM3DNodes.GetLength(1);
+        int zloop = AM3DNodes.GetLength(2);
+        int totalLength = xloop*yloop*zloop;// 6是ambient cube的6个面  x轴每个轴存一个面的信息
+        AmbientCubeData[] datas = new AmbientCubeData[totalLength];
+        UnityEngine.Debug.Log(totalLength);
+        Color[] threeDColors = new Color[totalLength*6];
+        for (int y = 0; y < yloop; y++)
+        {
+            for (int z = 0; z < zloop; z++)
+            {
+                for (int x = 0; x < xloop; x++)
+                {
+                    AMNode node = AM3DNodes[x, y, z].GetComponent<AMNode>();
+                    Color[] colors = node.GetColorFromData();
+                    AmbientCubeData data = node.GetData();
+                    // for (int i = 0; i < colors.Length; i++)
+                    // {
+                    //     threeDColors[i+x+y*yloop+z*zloop*zloop] = colors[i];
+                    // }
+
+                    int index = x  + z * (zloop) + y * (yloop) * (yloop);
+                    UnityEngine.Debug.Log(index);
+                    datas[index]=data;
+                }
+            }
+        }
+        
+        
+        Texture3DSaver.CreateAndSaveTexture3D(new Vector3(xloop,yloop,zloop), datas);
+    }
+    
     
     private void OnDrawGizmos()
     {
