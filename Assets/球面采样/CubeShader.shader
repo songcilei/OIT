@@ -3,12 +3,13 @@ Shader "Unlit/CubeShader"
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
-        _Up("Up",Vector) = (0,1,0,0)
-        _Down("Down",Vector) = (0,-1,0,0)
-        _Left("Left",Vector) = (1,0,0,0)
-        _Right("Right",Vector) = (-1,0,0,0)
-        _Front("Front",Vector) = (0,0,1,0)
-        _Back("Back",Vector)=(0,0,-1,0)
+//        _Right("Right",Vector) = (-1,0,0,0)
+//        _Left("Left",Vector) = (1,0,0,0)
+//        
+//        _Up("Up",Vector) = (0,1,0,0)
+//        _Down("Down",Vector) = (0,-1,0,0)
+//        _Front("Front",Vector) = (0,0,1,0)
+//        _Back("Back",Vector)=(0,0,-1,0)
     }
     SubShader
     {

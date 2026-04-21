@@ -51,7 +51,7 @@ public class Texture3DSaver
 
     public static void CreateAndSaveTexture3D(Vector3 size, AmbientCubeData[] datas)
     {
-        int sizeX = (int)size.x;
+        int sizeX = (int)size.x-1;//舍弃最后一组 因为已经到边缘了 边缘的颜色由左边的顶点控制
         int sizeY = (int)size.y;
         int sizeZ = (int)size.z;
         Debug.Log(sizeX+"::"+sizeY+"::"+sizeZ);
@@ -59,16 +59,17 @@ public class Texture3DSaver
             sizeX*6,sizeY,sizeZ, TextureFormat.RGBA32, false
         );
         tex3D.wrapMode = TextureWrapMode.Repeat;
-        tex3D.filterMode = FilterMode.Trilinear;
+        tex3D.filterMode = FilterMode.Point;
         
         for (int y = 0; y < sizeY; y++)
         {
             for (int z = 0; z < sizeZ; z++)
             {
-                for (int x = 0; x < sizeX; x++)
+                for (int x = 0; x < sizeX*6; x+=6)
                 {
-
-                    int index = x + z * sizeZ + y * sizeY*sizeY;
+                    Debug.Log(tex3D.width);
+                    int index = x/6 + z * sizeZ + y * sizeY*sizeY;
+                    Debug.Log("::::index:::"+index);
                     tex3D.SetPixel(x,y,z, new Color(datas[index].right.x,datas[index].right.y,datas[index].right.z));
                     tex3D.SetPixel(x+1,y,z, new Color(datas[index].left.x,datas[index].left.y,datas[index].left.z));
                     tex3D.SetPixel(x+2,y,z,new Color(datas[index].up.x,datas[index].up.y,datas[index].up.z));

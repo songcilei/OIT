@@ -123,10 +123,13 @@ public class AMCreateTool : MonoBehaviour
 
                     int index = x  + z * (zloop) + y * (yloop) * (yloop);
                     UnityEngine.Debug.Log(index);
+                    // UnityEngine.Debug.Log("X:"+x +"   Y:"+y +"    Z:"+z);
                     datas[index]=data;
+                    // UnityEngine.Debug.Log("right:"+data.right +"::left:"+data.left);
                 }
             }
         }
+        threeDMat.SetVector("_TexInfo",new Vector4((xloop-1)*6,yloop,zloop,1));
         
         
         Texture3DSaver.CreateAndSaveTexture3D(new Vector3(xloop,yloop,zloop), datas);

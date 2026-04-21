@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class AmbientCubeBaker
 {
@@ -207,6 +209,7 @@ public class AmbientCubeBaker
 /// <summary>
 /// 真正的 Ambient Cube：6 个方向纯色
 /// </summary>
+[Serializable]
 public struct AmbientCubeData
 {
     public Vector3 right;//+X
