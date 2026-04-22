@@ -129,7 +129,7 @@ public class AMCreateTool : MonoBehaviour
                 }
             }
         }
-        threeDMat.SetVector("_TexInfo",new Vector4((xloop-1)*6,yloop,zloop,1));
+        threeDMat.SetVector("_TexInfo",new Vector4((xloop)*6,yloop,zloop,1));
         
         
         Texture3DSaver.CreateAndSaveTexture3D(new Vector3(xloop,yloop,zloop), datas);

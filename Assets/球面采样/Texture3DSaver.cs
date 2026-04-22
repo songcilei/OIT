@@ -51,7 +51,7 @@ public class Texture3DSaver
 
     public static void CreateAndSaveTexture3D(Vector3 size, AmbientCubeData[] datas)
     {
-        int sizeX = (int)size.x-1;//舍弃最后一组 因为已经到边缘了 边缘的颜色由左边的顶点控制
+        int sizeX = (int)size.x;//舍弃最后一组 因为已经到边缘了 边缘的颜色由左边的顶点控制
         int sizeY = (int)size.y;
         int sizeZ = (int)size.z;
         Debug.Log(sizeX+"::"+sizeY+"::"+sizeZ);

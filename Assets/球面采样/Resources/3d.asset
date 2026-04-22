@@ -16,11 +16,11 @@ Texture3D:
   serializedVersion: 3
   m_ColorSpace: 0
   m_Format: 8
-  m_Width: 18
+  m_Width: 24
   m_Height: 1
   m_Depth: 3
   m_MipCount: 1
-  m_DataSize: 216
+  m_DataSize: 288
   m_TextureSettings:
     serializedVersion: 2
     m_FilterMode: 0
@@ -31,8 +31,8 @@ Texture3D:
     m_WrapW: 0
   m_UsageMode: 0
   m_IsReadable: 1
-  image data: 216
-  _typelessdata: 774049ff885e09ff4e553bffbf260bff7d510fff72534bff70404aff85451aff314846ffd0120cff6f5117ff674658ff653e4aff803e22ff26434dffcd100dff684d1aff60455eff784839ff895d05ff76824effc8260aff707012ff8f4e33ff754546ff8f4a11ff365941ffd9130bff6c6e17ff85444fff7c5353ff834419ff345c4fffd8110cff646a1dff7d4355ff6c5f3eff876107ff4f7537ffbb320aff558e10ff91513bff7b5936ff7e5b0bff3b733fffcb200bff3a8f0bff904343ff72674dff765813ff418253ffc81f0bff46a31bff86424fff
+  image data: 288
+  _typelessdata: 724249ff865c07ff4c543bffc1240aff795312ff745249ff713b4dff8a4216ff344646ffd1110cff7a3e1fff664659ff623f4cff7b3e26ff26424dffcf0f0dff654e1cff61435cff814147ff885d04ff57623cffc8250bff776015ff8a5341ff814147ff885d04ff57623cffc8250bff776015ff8a5341ff714743ff93451cff3c5748ffd8140eff6a5e21ff7e4145ff664046ff83441cff345a50ffd6120cff5c6618ff7b4459ff705c35ff876107ff567635ffbb310aff4a890aff914e34ff705c35ff876107ff567635ffbb310aff4a890aff914e34ff6c5f40ff7d5a15ff3a7743ffc7240cff439e13ff8c434dff5d513bff765617ff2b6a47ffc8200bff34950fff85404cff3b3d42ff6f561dff205846ffa81e0dff317c19ff6f3b49ff
   m_StreamData:
     serializedVersion: 2
     offset: 0

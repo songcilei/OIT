@@ -76,7 +76,8 @@ Shader "Unlit/3dSampleShader"
                 
                 
                 _ThreeDTex_texelSize.x = 1.0f/_TexInfo.x;//tex 1/widht
-                world2UV +=float3(1/(_TexInfo.x*2),1/(_TexInfo.y*2),1/(_TexInfo.z*2));//half pixel offset
+                world2UV +=float3(1.0f/(_TexInfo.x*2),1.0f/(_TexInfo.y*2),1.0f/(_TexInfo.z*2));//half pixel offset
+                
                 float3 uvNorX = world2UV;
                 uvNorX.x = uvNorX.x+isNegative.x*_ThreeDTex_texelSize.x;
                 float3 uvNorY = world2UV;
@@ -97,7 +98,7 @@ Shader "Unlit/3dSampleShader"
             
             float3 IrradianceVolumeFour(float3 N, float3 world2UV,float3 frac)
             {
-                float pixelWidht = 1.0f/_TexInfo.x;
+                float pixelWidht = 1.0f/_TexInfo.x;//1/24
                 float pixelDepth = 1.0f/_TexInfo.z;
                 float pixelHeight = 1.0f/_TexInfo.y;
                 
@@ -128,8 +129,10 @@ Shader "Unlit/3dSampleShader"
                 
                 float4 StartPos = _StartPos;
                 float3 N = normalize(i.normal);
+
                 // float3 world2UV = floor(i.worldPos - StartPos)*_Resolution/_Extent;//3D纹理坐标
-                float3 loop =(_Extent/_Resolution); //24/8=3  +1是因为 存储颜色3D采样的点 会多一个 
+                float3 loop =(_Extent/_Resolution)+1; //24/8=3  +1的原因是因为虽然 段数=3  但实际保存像素数量(在结尾的部分)比段数多1 所以+1 才能对的上采样位置
+                
                 float3 world2UV = floor((i.worldPos - StartPos)/_Extent*loop)/loop;//3D纹理坐标
 
 //这个是按有混合插值的的方法进行计算                
