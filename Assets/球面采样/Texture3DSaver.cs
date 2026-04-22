@@ -49,7 +49,7 @@ public class Texture3DSaver
         
     }
 
-    public static void CreateAndSaveTexture3D(Vector3 size, AmbientCubeData[] datas)
+    public static Texture3D CreateAndSaveTexture3D(Vector3 size, AmbientCubeData[] datas)
     {
         int sizeX = (int)size.x;//舍弃最后一组 因为已经到边缘了 边缘的颜色由左边的顶点控制
         int sizeY = (int)size.y;
@@ -85,6 +85,9 @@ public class Texture3DSaver
         //3.保存到本地
         string path = "Assets/球面采样/Resources/3d.asset";
         SaveTexture3D(tex3D,path);
+
+        Texture3D tex = AssetDatabase.LoadAssetAtPath<Texture3D>(path);
+        return tex;
     }
 
 

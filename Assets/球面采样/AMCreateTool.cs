@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using Sirenix.Serialization;
+using Unity.Mathematics;
+using UnityEditor;
 using UnityEngine;
 
 public enum ComputeMode
@@ -27,7 +29,13 @@ public class AMCreateTool : MonoBehaviour
     
     [Button(ButtonSizes.Gigantic)]
     public void Create()
-    { 
+    {
+        if (!CheckValue())
+        {
+            UnityEngine.Debug.LogError("执行失败！！！！！！");
+            return;
+        }
+        
         AMNodes.Clear();
         Vector3 startPos = bounds.center+transform.position-bounds.extents;
         int xLoop = (int)bounds.extents.x*2/resolution;
@@ -87,12 +95,12 @@ public class AMCreateTool : MonoBehaviour
     [Button(ButtonSizes.Gigantic)]
     public void Clear()
     {
-        foreach (var n in AMNodes)
-        {
-            GameObject.DestroyImmediate(n);
-        }
-        
         AMNodes.Clear();
+        int child = transform.childCount;
+        for (int i = child-1; i >=0; i--)
+        {
+            GameObject.DestroyImmediate(transform.GetChild(i).gameObject);
+        }
         
     }
     
@@ -132,7 +140,8 @@ public class AMCreateTool : MonoBehaviour
         threeDMat.SetVector("_TexInfo",new Vector4((xloop)*6,yloop,zloop,1));
         
         
-        Texture3DSaver.CreateAndSaveTexture3D(new Vector3(xloop,yloop,zloop), datas);
+        var tex = Texture3DSaver.CreateAndSaveTexture3D(new Vector3(xloop,yloop,zloop), datas);
+        threeDMat.SetTexture("_ThreeDTex", tex);
     }
     
     
@@ -147,5 +156,17 @@ public class AMCreateTool : MonoBehaviour
             Gizmos.color = new Color(0, .8f, 0, 0.5f);
             Gizmos.DrawCube(bounds.center+transform.position, bounds.size);
         }
+    }
+
+
+    private bool CheckValue()
+    {
+        if (!Mathf.Approximately((bounds.extents.x*2)%resolution,0) || !Mathf.Approximately((bounds.extents.z*2)%resolution,0))
+        {
+            EditorUtility.DisplayDialog("错误","Bounds 的 Extent的值x2的情况下必须是resolution的倍数！！","ok");
+            return false;
+        }
+
+        return true;
     }
 }
