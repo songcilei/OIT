@@ -99,6 +99,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mat: {fileID: 0}
   RProbe: {fileID: 0}
+  data:
+    right: {x: 0, y: 0, z: 0}
+    left: {x: 0, y: 0, z: 0}
+    up: {x: 0, y: 0, z: 0}
+    down: {x: 0, y: 0, z: 0}
+    forward: {x: 0, y: 0, z: 0}
+    back: {x: 0, y: 0, z: 0}
 --- !u!215 &4320272520154886965
 ReflectionProbe:
   m_ObjectHideFlags: 0

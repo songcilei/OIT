@@ -20,6 +20,7 @@ public class AMCreateTool : MonoBehaviour
     public int resolution;
     AMNode[,] node;
     public GameObject amNode;
+    public float NodeScale=0.25f;
     public List<GameObject> AMNodes;
     public GameObject[,,] AM3DNodes;
 
@@ -54,6 +55,7 @@ public class AMCreateTool : MonoBehaviour
                 {
                     Vector3 pos = new Vector3(x*resolution,y*resolution,z*resolution)+startPos;
                     var node = Instantiate(amNode, pos, Quaternion.identity, this.transform);
+                    node.transform.localScale = Vector3.one * NodeScale;
                     AMNodes.Add(node);
                     // UnityEngine.Debug.Log(x+"::"+y+"::"+z);
                     AM3DNodes[x,y,z] = node;

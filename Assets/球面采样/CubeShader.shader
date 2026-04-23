@@ -59,7 +59,7 @@ Shader "Unlit/CubeShader"
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                o.normal = mul(v.normal, (float3x3)unity_WorldToObject);
+                o.normal = normalize(mul(v.normal, (float3x3)unity_WorldToObject));
                 UNITY_TRANSFER_FOG(o,o.vertex);
                 return o;
             }
@@ -91,7 +91,7 @@ Shader "Unlit/CubeShader"
                 // col.rgb += saturate(dot(i.normal,float3(0,0,-1)))*_Back;
                 
                 // UNITY_APPLY_FOG(i.fogCoord, col);
-                
+       
                 
                 col.rgb = AmbientLight(i.normal);
                 return col;
