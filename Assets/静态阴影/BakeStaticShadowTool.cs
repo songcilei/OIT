@@ -83,7 +83,7 @@ public class BakeStaticShadowTool : MonoBehaviour
     }
     void SaveRt2Png(int shadowTextureSize,RenderTexture _targetRT,string name)
     {
-        Texture2D _finalTex =new Texture2D(shadowTextureSize, shadowTextureSize, TextureFormat.RGBAFloat, false);
+        Texture2D _finalTex =new Texture2D(shadowTextureSize, shadowTextureSize, TextureFormat.RGBA32, false,false);
         var cacheTex2 = RenderTexture.active;
         RenderTexture.active = _targetRT;
         _finalTex.ReadPixels(new Rect(0,0,shadowTextureSize,shadowTextureSize),0,0);

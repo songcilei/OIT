@@ -83,6 +83,18 @@ float UnpackDepth(float4 color)
     return dot(color, bitShift);
 }
 
+float4 PackDepthToRGBA(float depth)
+{
+    const float r = 1.0 / 255.0;
+    const float g = r * r;
+    const float b = g * r;
+    const float a = b * r;
+
+    float4 res = frac(depth * float4(1.0, 255.0, 65025.0, 16581375.0));
+    res.rgb -= res.gba * r;
+    return res;
+}
+
 half4 ShadowPassFragment(Varyings input) : SV_TARGET
 {
     UNITY_SETUP_INSTANCE_ID(input);
@@ -95,7 +107,7 @@ half4 ShadowPassFragment(Varyings input) : SV_TARGET
         LODFadeCrossFade(input.positionCS);
     #endif
 
-    float4 depth = PackDepth(input.positionCS.z*0.5+0.5);
+    float4 depth = PackDepthToRGBA(input.positionCS.z*0.5+0.5);
     return depth;
     //return float4(input.positionCS.zzz*0.5+0.5, 1.0f);
 }
