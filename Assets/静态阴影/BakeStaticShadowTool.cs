@@ -23,7 +23,7 @@ public class BakeStaticShadowTool : MonoBehaviour
         Camera cam = ComputeCamPos(BlockLength);
         
         //create rt
-        RenderTexture rt = RenderTexture.GetTemporary(RTWidth, RTWidth, 24, RenderTextureFormat.ARGB32);
+        RenderTexture rt = RenderTexture.GetTemporary(RTWidth, RTWidth, 24, RenderTextureFormat.ARGBHalf);
         rt.filterMode = FilterMode.Point;
         rt.autoGenerateMips = false;
         rt.Create();
@@ -31,7 +31,7 @@ public class BakeStaticShadowTool : MonoBehaviour
         cam.targetTexture = rt;
         ShadeUnilit.ReplaceObjectsShader(Shader.Find("Unlit/ShadowDepth"));
         cam.Render();
-        ShadeUnilit.RevertObjectShader();
+        // ShadeUnilit.RevertObjectShader();
 
         //Save rt 2 png
         SaveRt2Png(rt.width,rt,"shadowMap");
