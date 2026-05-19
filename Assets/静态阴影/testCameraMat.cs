@@ -12,17 +12,24 @@ public class testCameraMat : MonoBehaviour
     public Material TestMat;
     
     [Button]
-    public void ChangeT()
+    public void ChangeT(Material testMat)
     {
         cam = GetComponent<Camera>();
-        Matrix4x4 mat = this.transform.worldToLocalMatrix;
-        Matrix4x4 pmat = cam.projectionMatrix;
+        Matrix4x4 mat = cam.worldToCameraMatrix;
+        Matrix4x4 pmat = GL.GetGPUProjectionMatrix(cam.projectionMatrix,true);
       
         Matrix4x4 mvp = pmat * mat;
-        TestMat.SetMatrix("_SMat",mvp);
+        if (testMat!=null)
+        {
+            Shader.SetGlobalMatrix("_SMat",mvp);
+        }
+        else
+        {
+            TestMat.SetMatrix("_SMat",mvp);
+        }
         
         Debug.Log(mvp);
-        Vector3 pos = mvp * new Vector4(obj.transform.position.x,obj.transform.position.y,obj.transform.position.z,1);
-        Debug.Log(pos);
+        // Vector3 pos = mvp * new Vector4(obj.transform.position.x,obj.transform.position.y,obj.transform.position.z,1);
+        // Debug.Log(pos);
     }
 }

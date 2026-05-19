@@ -14,8 +14,9 @@ public class BakeStaticShadowTool : MonoBehaviour
 
     public int RTWidth = 1024;
     private GameObject root;
-    
-    
+    public Material shadowMat;
+    public GameObject DepthGenerateObj;
+    public GameObject shadowPlane;
     [Button]
     public void BakeStaticShadow()
     {
@@ -29,6 +30,8 @@ public class BakeStaticShadowTool : MonoBehaviour
         rt.Create();
 
         cam.targetTexture = rt;
+        DepthGenerateObj.SetActive(true);
+        shadowPlane.SetActive(false);
         ShadeUnilit.ReplaceObjectsShader(Shader.Find("Unlit/ShadowDepth"));
         cam.Render();
         // ShadeUnilit.RevertObjectShader();
@@ -36,6 +39,10 @@ public class BakeStaticShadowTool : MonoBehaviour
         //Save rt 2 png
         SaveRt2Png(rt.width,rt,"shadowMap");
         //Set png 2 mat
+        
+        
+        DepthGenerateObj.SetActive(false);
+        shadowPlane.SetActive(true);
         
     }
 
@@ -79,6 +86,9 @@ public class BakeStaticShadowTool : MonoBehaviour
         camObj.transform.eulerAngles = new Vector3(light.transform.eulerAngles.x, 0, light.transform.eulerAngles.z);
         camObj.transform.SetParent(root.transform);
         root.transform.eulerAngles = new Vector3(0, light.transform.eulerAngles.y, 0);
+        var testCamMat = camObj.AddComponent<testCameraMat>();
+        testCamMat.ChangeT(shadowMat);
+        
         return cam;
     }
     void SaveRt2Png(int shadowTextureSize,RenderTexture _targetRT,string name)

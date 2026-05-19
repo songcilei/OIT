@@ -122,7 +122,7 @@ float4 ShadowPassFragment(Varyings input) : SV_TARGET
         LODFadeCrossFade(input.positionCS);
     #endif
 
-    float4 depth = pack(input.positionCS.z/input.positionCS.w*0.5+0.5);
+    float4 depth = (input.positionCS.z/input.positionCS.w);
     // float dd = UnpackDepth(depth);
     return depth;
     //return float4(input.positionCS.zzz*0.5+0.5, 1.0f);
