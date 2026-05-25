@@ -74,7 +74,7 @@ public class BakeStaticShadowTool : MonoBehaviour
         cam.orthographic = true;
         cam.orthographicSize = BoundLength.x / 2;
         cam.clearFlags = CameraClearFlags.Depth;
-        cam.backgroundColor = new Color(0, 0, 0, 0);
+        cam.backgroundColor = new Color(1, 1, 1, 1);
         cam.stereoTargetEye = StereoTargetEyeMask.None;
         cam.enabled = false;
         //init cam position
