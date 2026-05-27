@@ -1,6 +1,7 @@
 import argparse
 import json
 import math
+import struct
 from pathlib import Path
 
 import numpy as np
@@ -158,10 +159,99 @@ def write_model_json_with_final_size(
     )
 
 
+def write_int32(buffer, value: int) -> None:
+    buffer.write(struct.pack("<i", int(value)))
+
+
+def write_float32(buffer, value: float) -> None:
+    buffer.write(struct.pack("<f", float(value)))
+
+
+def write_model_binary(
+    output_path: Path,
+    model: FourierMlp,
+    width: int,
+    height: int,
+    frequency_count: int,
+    hidden_width: int,
+    hidden_layers: int,
+    metrics: dict,
+) -> None:
+    layers = collect_linear_layers(model)
+    with output_path.open("wb") as buffer:
+        buffer.write(b"NHM1")
+        write_int32(buffer, 1)
+        write_int32(buffer, width)
+        write_int32(buffer, height)
+        write_int32(buffer, frequency_count)
+        write_int32(buffer, hidden_width)
+        write_int32(buffer, hidden_layers)
+        write_int32(buffer, len(layers))
+
+        for layer in layers:
+            write_int32(buffer, layer["inputSize"])
+            write_int32(buffer, layer["outputSize"])
+            write_int32(buffer, len(layer["weights"]))
+            write_int32(buffer, len(layer["bias"]))
+            for weight in layer["weights"]:
+                write_float32(buffer, weight)
+            for bias in layer["bias"]:
+                write_float32(buffer, bias)
+
+        write_float32(buffer, metrics["mse"])
+        write_float32(buffer, metrics["mae"])
+        write_float32(buffer, metrics["maxError"])
+        write_int32(buffer, metrics["sourceBytes"])
+        write_int32(buffer, metrics["modelBytes"])
+        write_float32(buffer, metrics["compressionRatio"])
+
+
+def write_model_binary_with_final_size(
+    output_path: Path,
+    model: FourierMlp,
+    width: int,
+    height: int,
+    frequency_count: int,
+    hidden_width: int,
+    hidden_layers: int,
+    metrics: dict,
+) -> None:
+    previous_size = -1
+    for _ in range(4):
+        write_model_binary(
+            output_path,
+            model,
+            width,
+            height,
+            frequency_count,
+            hidden_width,
+            hidden_layers,
+            metrics,
+        )
+        model_bytes = output_path.stat().st_size
+        metrics["modelBytes"] = int(model_bytes)
+        metrics["compressionRatio"] = float(metrics["sourceBytes"] / model_bytes) if model_bytes > 0 else 0.0
+        if model_bytes == previous_size:
+            return
+        previous_size = model_bytes
+
+    write_model_binary(
+        output_path,
+        model,
+        width,
+        height,
+        frequency_count,
+        hidden_width,
+        hidden_layers,
+        metrics,
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train one neural heightmap tile model.")
     parser.add_argument("--input", required=True, help="Input grayscale PNG tile path.")
-    parser.add_argument("--output", required=True, help="Output model JSON path.")
+    parser.add_argument("--output", default="", help="Optional output model JSON path.")
+    parser.add_argument("--binary-output", default="", help="Optional output binary .bytes path.")
     parser.add_argument("--preview", default="", help="Optional reconstructed preview PNG path.")
     parser.add_argument("--frequency-count", type=int, default=8)
     parser.add_argument("--hidden-width", type=int, default=64)
@@ -174,15 +264,18 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
+def train_height_tile(args: argparse.Namespace) -> dict:
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
     input_path = Path(args.input)
-    output_path = Path(args.output)
+    output_path = Path(args.output) if args.output else None
+    binary_output_path = Path(args.binary_output) if args.binary_output else None
     preview_path = Path(args.preview) if args.preview else None
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+    if binary_output_path is not None:
+        binary_output_path.parent.mkdir(parents=True, exist_ok=True)
     if preview_path is not None:
         preview_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -224,16 +317,28 @@ def main() -> None:
         "modelBytes": 0,
         "compressionRatio": 0.0,
     }
-    write_model_json_with_final_size(
-        output_path,
-        model,
-        width,
-        height,
-        args.frequency_count,
-        args.hidden_width,
-        args.hidden_layers,
-        metrics,
-    )
+    if output_path is not None:
+        write_model_json_with_final_size(
+            output_path,
+            model,
+            width,
+            height,
+            args.frequency_count,
+            args.hidden_width,
+            args.hidden_layers,
+            metrics,
+        )
+    if binary_output_path is not None:
+        write_model_binary_with_final_size(
+            binary_output_path,
+            model,
+            width,
+            height,
+            args.frequency_count,
+            args.hidden_width,
+            args.hidden_layers,
+            metrics,
+        )
 
     print(f"mse={metrics['mse']:.8f}")
     print(f"mae={metrics['mae']:.8f}")
@@ -241,9 +346,25 @@ def main() -> None:
     print(f"source_bytes={metrics['sourceBytes']}")
     print(f"model_bytes={metrics['modelBytes']}")
     print(f"compression_ratio={metrics['compressionRatio']:.4f}")
-    print(f"wrote={output_path}")
+    if output_path is not None:
+        print(f"wrote={output_path}")
+    if binary_output_path is not None:
+        print(f"binary={binary_output_path}")
     if preview_path is not None:
         print(f"preview={preview_path}")
+
+    return {
+        "metrics": metrics,
+        "width": width,
+        "height": height,
+        "model": model,
+        "predicted": predicted,
+    }
+
+
+def main() -> None:
+    args = parse_args()
+    train_height_tile(args)
 
 
 if __name__ == "__main__":

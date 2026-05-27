@@ -10,6 +10,17 @@ py Tools/NeuralHeightmap/train_height_tile.py `
   --steps 3000
 ```
 
+Export JSON and binary:
+
+```powershell
+py Tools/NeuralHeightmap/train_height_tile.py `
+  --input "path/to/height_tile.png" `
+  --output "Temp/NeuralHeightmapSmoke/height_tile.model.json" `
+  --binary-output "Temp/NeuralHeightmapSmoke/height_tile.model.bytes" `
+  --preview "Temp/NeuralHeightmapSmoke/height_tile.preview.png" `
+  --steps 3000
+```
+
 Install dependencies if needed:
 
 ```powershell
