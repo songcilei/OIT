@@ -47,7 +47,7 @@ def load_height_tile(path: Path) -> tuple[np.ndarray, int]:
 
 def build_uv_grid(width: int, height: int) -> np.ndarray:
     xs = np.linspace(0.0, 1.0, width, dtype=np.float32)
-    ys = np.linspace(0.0, 1.0, height, dtype=np.float32)
+    ys = np.linspace(1.0, 0.0, height, dtype=np.float32)
     grid_x, grid_y = np.meshgrid(xs, ys)
     return np.stack([grid_x.reshape(-1), grid_y.reshape(-1)], axis=1)
 
