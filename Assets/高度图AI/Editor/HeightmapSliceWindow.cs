@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -15,10 +16,13 @@ namespace HeightmapAI.Editor
 
         private InputKind inputKind;
         private TerrainData terrainData;
+        private Terrain terrain;
         private Texture2D texture;
         private int tileWidth = 256;
         private int tileHeight = 256;
         private string outputDirectory = "";
+        private bool bakeGameObjects;
+        private readonly List<GameObject> overlayObjects = new List<GameObject>();
         private string statusMessage = "";
         private MessageType statusType = MessageType.Info;
 
@@ -36,6 +40,7 @@ namespace HeightmapAI.Editor
             if (inputKind == InputKind.TerrainData)
             {
                 terrainData = (TerrainData)EditorGUILayout.ObjectField("Terrain Data", terrainData, typeof(TerrainData), false);
+                terrain = (Terrain)EditorGUILayout.ObjectField("Terrain Object", terrain, typeof(Terrain), true);
             }
             else
             {
@@ -46,6 +51,9 @@ namespace HeightmapAI.Editor
             EditorGUILayout.LabelField("Tiles", EditorStyles.boldLabel);
             tileWidth = EditorGUILayout.IntField("Tile Width", tileWidth);
             tileHeight = EditorGUILayout.IntField("Tile Height", tileHeight);
+
+            EditorGUILayout.Space();
+            DrawObjectOverlaySection();
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Output", EditorStyles.boldLabel);
@@ -78,12 +86,14 @@ namespace HeightmapAI.Editor
             try
             {
                 IHeightmapSource source = CreateSource();
+                HeightmapObjectOverlaySettings overlaySettings = CreateObjectOverlaySettings(source);
                 var processor = new HeightmapSliceProcessor();
                 HeightmapSliceResult result = processor.ExportPngTiles(
                     source,
                     tileWidth,
                     tileHeight,
                     outputDirectory,
+                    overlaySettings,
                     (progress, message) => EditorUtility.DisplayProgressBar("Heightmap Slicer", message, progress));
 
                 statusType = MessageType.Info;
@@ -116,6 +126,142 @@ namespace HeightmapAI.Editor
 
             return new TextureHeightmapSource(texture);
         }
+
+        private void DrawObjectOverlaySection()
+        {
+            EditorGUILayout.LabelField("Object Overlay", EditorStyles.boldLabel);
+            bakeGameObjects = EditorGUILayout.Toggle("Bake GameObjects", bakeGameObjects);
+
+            using (new EditorGUI.DisabledScope(!bakeGameObjects))
+            {
+                if (inputKind != InputKind.TerrainData)
+                {
+                    EditorGUILayout.HelpBox("GameObject overlay needs TerrainData plus a Terrain Object for world-space height conversion.", MessageType.Info);
+                }
+
+                for (int i = 0; i < overlayObjects.Count; i++)
+                {
+                    EditorGUILayout.BeginHorizontal();
+                    overlayObjects[i] = (GameObject)EditorGUILayout.ObjectField($"Object {i}", overlayObjects[i], typeof(GameObject), true);
+                    if (GUILayout.Button("-", GUILayout.Width(28)))
+                    {
+                        overlayObjects.RemoveAt(i);
+                        i--;
+                    }
+                    EditorGUILayout.EndHorizontal();
+                }
+
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Add Object"))
+                {
+                    overlayObjects.Add(null);
+                }
+
+                if (GUILayout.Button("Clear"))
+                {
+                    overlayObjects.Clear();
+                }
+                EditorGUILayout.EndHorizontal();
+
+                Rect dropArea = GUILayoutUtility.GetRect(0f, 36f, GUILayout.ExpandWidth(true));
+                GUI.Box(dropArea, "Drag GameObjects Here");
+                HandleObjectDrop(dropArea);
+            }
+        }
+
+        private void HandleObjectDrop(Rect dropArea)
+        {
+            Event current = Event.current;
+            if (!dropArea.Contains(current.mousePosition))
+            {
+                return;
+            }
+
+            if (current.type != EventType.DragUpdated && current.type != EventType.DragPerform)
+            {
+                return;
+            }
+
+            DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+            if (current.type == EventType.DragPerform)
+            {
+                DragAndDrop.AcceptDrag();
+                foreach (UnityEngine.Object dragged in DragAndDrop.objectReferences)
+                {
+                    if (dragged is GameObject gameObject && !overlayObjects.Contains(gameObject))
+                    {
+                        overlayObjects.Add(gameObject);
+                    }
+                }
+            }
+
+            current.Use();
+        }
+
+        private HeightmapObjectOverlaySettings CreateObjectOverlaySettings(IHeightmapSource source)
+        {
+            if (!bakeGameObjects)
+            {
+                return HeightmapObjectOverlaySettings.Disabled;
+            }
+
+            if (inputKind != InputKind.TerrainData)
+            {
+                throw new HeightmapSliceException("GameObject overlay is only available when Source Type is TerrainData.");
+            }
+
+            Terrain resolvedTerrain = ResolveTerrain();
+            if (resolvedTerrain == null)
+            {
+                throw new HeightmapSliceException("Terrain Object is missing. Assign the scene Terrain that uses this TerrainData.");
+            }
+
+            if (resolvedTerrain.terrainData != terrainData)
+            {
+                throw new HeightmapSliceException("Terrain Object must use the selected TerrainData.");
+            }
+
+            var validObjects = new List<GameObject>();
+            for (int i = 0; i < overlayObjects.Count; i++)
+            {
+                if (overlayObjects[i] != null)
+                {
+                    validObjects.Add(overlayObjects[i]);
+                }
+            }
+
+            if (validObjects.Count == 0)
+            {
+                throw new HeightmapSliceException("Bake GameObjects is enabled, but no GameObjects were assigned.");
+            }
+
+            return HeightmapObjectOverlaySettings.FromGameObjects(
+                resolvedTerrain.transform.position,
+                resolvedTerrain.terrainData.size,
+                source.Width,
+                source.Height,
+                validObjects);
+        }
+
+        private Terrain ResolveTerrain()
+        {
+            if (terrain != null)
+            {
+                return terrain;
+            }
+
+            Terrain[] terrains = FindObjectsByType<Terrain>(FindObjectsSortMode.None);
+            foreach (Terrain candidate in terrains)
+            {
+                if (candidate != null && candidate.terrainData == terrainData)
+                {
+                    terrain = candidate;
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
     }
 
     internal interface IHeightmapSource
@@ -147,6 +293,195 @@ namespace HeightmapAI.Editor
         public int Columns { get; }
         public int Rows { get; }
         public string OutputDirectory { get; }
+    }
+
+    internal readonly struct OverlayHit
+    {
+        public OverlayHit(Vector2Int coordinate, float height)
+        {
+            Coordinate = coordinate;
+            Height = Mathf.Clamp01(height);
+        }
+
+        public Vector2Int Coordinate { get; }
+        public float Height { get; }
+    }
+
+    internal sealed class HeightmapObjectOverlaySettings
+    {
+        private readonly Dictionary<Vector2Int, float> precomputedHits;
+        private readonly Collider[] colliders;
+        private readonly List<MeshCollider> temporaryColliders;
+
+        public HeightmapObjectOverlaySettings(
+            bool enabled,
+            Vector3 terrainPosition,
+            Vector3 terrainSize,
+            IEnumerable<OverlayHit> precomputedHits)
+        {
+            Enabled = enabled;
+            TerrainPosition = terrainPosition;
+            TerrainSize = terrainSize;
+            this.precomputedHits = new Dictionary<Vector2Int, float>();
+            colliders = Array.Empty<Collider>();
+            temporaryColliders = new List<MeshCollider>();
+
+            if (precomputedHits == null)
+            {
+                return;
+            }
+
+            foreach (OverlayHit hit in precomputedHits)
+            {
+                this.precomputedHits[hit.Coordinate] = hit.Height;
+            }
+        }
+
+        private HeightmapObjectOverlaySettings(
+            Vector3 terrainPosition,
+            Vector3 terrainSize,
+            Collider[] colliders,
+            List<MeshCollider> temporaryColliders)
+        {
+            Enabled = true;
+            TerrainPosition = terrainPosition;
+            TerrainSize = terrainSize;
+            precomputedHits = null;
+            this.colliders = colliders;
+            this.temporaryColliders = temporaryColliders;
+        }
+
+        public static HeightmapObjectOverlaySettings Disabled { get; } =
+            new HeightmapObjectOverlaySettings(false, Vector3.zero, Vector3.one, Array.Empty<OverlayHit>());
+
+        public bool Enabled { get; }
+        public Vector3 TerrainPosition { get; }
+        public Vector3 TerrainSize { get; }
+
+        public static HeightmapObjectOverlaySettings FromGameObjects(
+            Vector3 terrainPosition,
+            Vector3 terrainSize,
+            int width,
+            int height,
+            IReadOnlyList<GameObject> gameObjects)
+        {
+            var temporaryColliders = new List<MeshCollider>();
+            var colliderList = new List<Collider>();
+
+            for (int i = 0; i < gameObjects.Count; i++)
+            {
+                GameObject gameObject = gameObjects[i];
+                if (gameObject == null)
+                {
+                    continue;
+                }
+
+                colliderList.AddRange(gameObject.GetComponentsInChildren<Collider>());
+                MeshFilter[] meshFilters = gameObject.GetComponentsInChildren<MeshFilter>();
+                foreach (MeshFilter meshFilter in meshFilters)
+                {
+                    if (meshFilter.sharedMesh == null)
+                    {
+                        continue;
+                    }
+
+                    if (meshFilter.GetComponent<Collider>() != null)
+                    {
+                        continue;
+                    }
+
+                    MeshCollider meshCollider = meshFilter.gameObject.AddComponent<MeshCollider>();
+                    meshCollider.sharedMesh = meshFilter.sharedMesh;
+                    temporaryColliders.Add(meshCollider);
+                    colliderList.Add(meshCollider);
+                }
+            }
+
+            if (colliderList.Count == 0)
+            {
+                DisposeTemporaryColliders(temporaryColliders);
+                throw new HeightmapSliceException("Assigned GameObjects do not contain Collider or MeshFilter components.");
+            }
+
+            Physics.SyncTransforms();
+            return new HeightmapObjectOverlaySettings(terrainPosition, terrainSize, colliderList.ToArray(), temporaryColliders);
+        }
+
+        public bool TrySampleObjectHeight(IHeightmapSource source, int x, int y, out float height)
+        {
+            height = 0f;
+            if (!Enabled)
+            {
+                return false;
+            }
+
+            if (precomputedHits != null)
+            {
+                return precomputedHits.TryGetValue(new Vector2Int(x, y), out height);
+            }
+
+            if (colliders == null || colliders.Length == 0)
+            {
+                return false;
+            }
+
+            float u = source.Width <= 1 ? 0f : (float)x / (source.Width - 1);
+            float v = source.Height <= 1 ? 0f : (float)y / (source.Height - 1);
+            Vector3 origin = new Vector3(
+                TerrainPosition.x + u * TerrainSize.x,
+                TerrainPosition.y + TerrainSize.y + 1000f,
+                TerrainPosition.z + v * TerrainSize.z);
+            var ray = new Ray(origin, Vector3.down);
+            float maxDistance = TerrainSize.y + 2000f;
+
+            bool hasHit = false;
+            float highestWorldY = float.NegativeInfinity;
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider collider = colliders[i];
+                if (collider == null)
+                {
+                    continue;
+                }
+
+                if (collider.Raycast(ray, out RaycastHit hit, maxDistance) && hit.point.y > highestWorldY)
+                {
+                    highestWorldY = hit.point.y;
+                    hasHit = true;
+                }
+            }
+
+            if (!hasHit)
+            {
+                return false;
+            }
+
+            height = Mathf.Clamp01((highestWorldY - TerrainPosition.y) / TerrainSize.y);
+            return true;
+        }
+
+        public void Dispose()
+        {
+            DisposeTemporaryColliders(temporaryColliders);
+        }
+
+        private static void DisposeTemporaryColliders(List<MeshCollider> collidersToDispose)
+        {
+            if (collidersToDispose == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < collidersToDispose.Count; i++)
+            {
+                if (collidersToDispose[i] != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(collidersToDispose[i]);
+                }
+            }
+
+            collidersToDispose.Clear();
+        }
     }
 
     internal sealed class TerrainDataHeightmapSource : IHeightmapSource
@@ -215,6 +550,7 @@ namespace HeightmapAI.Editor
             int tileWidth,
             int tileHeight,
             string outputDirectory,
+            HeightmapObjectOverlaySettings overlaySettings,
             Action<float, string> progress)
         {
             if (source == null)
@@ -245,18 +581,38 @@ namespace HeightmapAI.Editor
             int total = columns * rows;
             int written = 0;
 
-            for (int row = 0; row < rows; row++)
+            try
             {
-                for (int column = 0; column < columns; column++)
+                for (int row = 0; row < rows; row++)
                 {
-                    progress?.Invoke((float)written / total, $"Writing tile {written + 1} / {total}");
-                    WriteTile(source, tileWidth, tileHeight, row, column, safeSourceName, outputDirectory);
-                    written++;
+                    for (int column = 0; column < columns; column++)
+                    {
+                        progress?.Invoke((float)written / total, $"Writing tile {written + 1} / {total}");
+                        WriteTile(source, tileWidth, tileHeight, row, column, safeSourceName, outputDirectory, overlaySettings);
+                        written++;
+                    }
                 }
+            }
+            finally
+            {
+                overlaySettings?.Dispose();
             }
 
             progress?.Invoke(1f, $"Wrote {written} PNG tiles.");
             return new HeightmapSliceResult(written, columns, rows, outputDirectory);
+        }
+
+        public static float SampleWithOverlay(IHeightmapSource source, int x, int y, HeightmapObjectOverlaySettings overlaySettings)
+        {
+            float terrainHeight = Mathf.Clamp01(source.Sample(x, y));
+            if (overlaySettings == null || !overlaySettings.Enabled)
+            {
+                return terrainHeight;
+            }
+
+            return overlaySettings.TrySampleObjectHeight(source, x, y, out float objectHeight)
+                ? Mathf.Max(terrainHeight, objectHeight)
+                : terrainHeight;
         }
 
         private static void WriteTile(
@@ -266,7 +622,8 @@ namespace HeightmapAI.Editor
             int row,
             int column,
             string safeSourceName,
-            string outputDirectory)
+            string outputDirectory,
+            HeightmapObjectOverlaySettings overlaySettings)
         {
             Texture2D tile = null;
             try
@@ -279,7 +636,7 @@ namespace HeightmapAI.Editor
                     {
                         int sourceX = column * tileWidth + x;
                         int sourceY = row * tileHeight + y;
-                        float height = Mathf.Clamp01(source.Sample(sourceX, sourceY));
+                        float height = SampleWithOverlay(source, sourceX, sourceY, overlaySettings);
                         tile.SetPixel(x, y, new Color(height, height, height, 1f));
                     }
                 }
