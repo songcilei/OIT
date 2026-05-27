@@ -46,8 +46,6 @@ namespace HeightmapAI.Editor
             EditorGUILayout.LabelField("Tiles", EditorStyles.boldLabel);
             tileWidth = EditorGUILayout.IntField("Tile Width", tileWidth);
             tileHeight = EditorGUILayout.IntField("Tile Height", tileHeight);
-            tileWidth = Mathf.Max(1, tileWidth);
-            tileHeight = Mathf.Max(1, tileHeight);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Output", EditorStyles.boldLabel);
@@ -270,26 +268,36 @@ namespace HeightmapAI.Editor
             string safeSourceName,
             string outputDirectory)
         {
-            Texture2D tile = new Texture2D(tileWidth, tileHeight, TextureFormat.RGBA32, false, true);
-
-            for (int y = 0; y < tileHeight; y++)
+            Texture2D tile = null;
+            try
             {
-                for (int x = 0; x < tileWidth; x++)
+                tile = new Texture2D(tileWidth, tileHeight, TextureFormat.RGBA32, false, true);
+
+                for (int y = 0; y < tileHeight; y++)
                 {
-                    int sourceX = column * tileWidth + x;
-                    int sourceY = row * tileHeight + y;
-                    float height = Mathf.Clamp01(source.Sample(sourceX, sourceY));
-                    tile.SetPixel(x, y, new Color(height, height, height, 1f));
+                    for (int x = 0; x < tileWidth; x++)
+                    {
+                        int sourceX = column * tileWidth + x;
+                        int sourceY = row * tileHeight + y;
+                        float height = Mathf.Clamp01(source.Sample(sourceX, sourceY));
+                        tile.SetPixel(x, y, new Color(height, height, height, 1f));
+                    }
+                }
+
+                tile.Apply(false, false);
+                byte[] png = tile.EncodeToPNG();
+
+                string fileName = $"{safeSourceName}_y{row:000}_x{column:000}.png";
+                string filePath = Path.Combine(outputDirectory, fileName);
+                File.WriteAllBytes(filePath, png);
+            }
+            finally
+            {
+                if (tile != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(tile);
                 }
             }
-
-            tile.Apply(false, false);
-            byte[] png = tile.EncodeToPNG();
-            UnityEngine.Object.DestroyImmediate(tile);
-
-            string fileName = $"{safeSourceName}_y{row:000}_x{column:000}.png";
-            string filePath = Path.Combine(outputDirectory, fileName);
-            File.WriteAllBytes(filePath, png);
         }
 
         private static string MakeSafeFileName(string name)
