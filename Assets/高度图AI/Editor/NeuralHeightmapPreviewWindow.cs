@@ -24,7 +24,14 @@ namespace HeightmapAI.Editor
         private void OnGUI()
         {
             EditorGUILayout.LabelField("Model", EditorStyles.boldLabel);
-            modelJson = (TextAsset)EditorGUILayout.ObjectField("JSON", modelJson, typeof(TextAsset), false);
+            TextAsset selectedModelJson = (TextAsset)EditorGUILayout.ObjectField("JSON", modelJson, typeof(TextAsset), false);
+            if (selectedModelJson != modelJson)
+            {
+                modelJson = selectedModelJson;
+                model = null;
+                hasEvaluation = false;
+                statusMessage = "";
+            }
 
             if (GUILayout.Button("Load Model", GUILayout.Height(28)))
             {

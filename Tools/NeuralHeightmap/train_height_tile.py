@@ -117,6 +117,47 @@ def write_model_json(
     output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def write_model_json_with_final_size(
+    output_path: Path,
+    model: FourierMlp,
+    width: int,
+    height: int,
+    frequency_count: int,
+    hidden_width: int,
+    hidden_layers: int,
+    metrics: dict,
+) -> None:
+    previous_size = -1
+    for _ in range(4):
+        write_model_json(
+            output_path,
+            model,
+            width,
+            height,
+            frequency_count,
+            hidden_width,
+            hidden_layers,
+            metrics,
+        )
+        model_bytes = output_path.stat().st_size
+        metrics["modelBytes"] = int(model_bytes)
+        metrics["compressionRatio"] = float(metrics["sourceBytes"] / model_bytes) if model_bytes > 0 else 0.0
+        if model_bytes == previous_size:
+            return
+        previous_size = model_bytes
+
+    write_model_json(
+        output_path,
+        model,
+        width,
+        height,
+        frequency_count,
+        hidden_width,
+        hidden_layers,
+        metrics,
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train one neural heightmap tile model.")
     parser.add_argument("--input", required=True, help="Input grayscale PNG tile path.")
@@ -183,21 +224,7 @@ def main() -> None:
         "modelBytes": 0,
         "compressionRatio": 0.0,
     }
-    write_model_json(
-        output_path,
-        model,
-        width,
-        height,
-        args.frequency_count,
-        args.hidden_width,
-        args.hidden_layers,
-        metrics,
-    )
-
-    model_bytes = output_path.stat().st_size
-    metrics["modelBytes"] = int(model_bytes)
-    metrics["compressionRatio"] = float(source_bytes / model_bytes) if model_bytes > 0 else 0.0
-    write_model_json(
+    write_model_json_with_final_size(
         output_path,
         model,
         width,
