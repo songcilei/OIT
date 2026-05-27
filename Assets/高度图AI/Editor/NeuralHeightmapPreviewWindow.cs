@@ -79,10 +79,13 @@ namespace HeightmapAI.Editor
                     throw new InvalidOperationException("Model JSON asset is missing.");
                 }
 
-                model = NeuralHeightmapModel.FromJson(modelJson.text);
+                bool isBinary = NeuralHeightmapModel.LooksLikeBinary(modelJson.bytes);
+                model = isBinary
+                    ? NeuralHeightmapModel.FromBytes(modelJson.bytes)
+                    : NeuralHeightmapModel.FromJson(modelJson.text);
                 hasEvaluation = false;
                 statusType = MessageType.Info;
-                statusMessage = $"Loaded model {model.TileWidth}x{model.TileHeight}. MAE: {model.Mae:0.######}, Max Error: {model.MaxError:0.######}.";
+                statusMessage = $"Loaded {((isBinary) ? "binary" : "json")} model {model.TileWidth}x{model.TileHeight}. MAE: {model.Mae:0.######}, Max Error: {model.MaxError:0.######}.";
             }
             catch (Exception exception)
             {
