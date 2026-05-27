@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Text;
 using UnityEngine;
 
 namespace HeightmapAI
@@ -76,6 +78,94 @@ namespace HeightmapAI
 
             NeuralHeightmapModelData parsed = JsonUtility.FromJson<NeuralHeightmapModelData>(json);
             return new NeuralHeightmapModel(parsed);
+        }
+
+        public static bool LooksLikeBinary(byte[] bytes)
+        {
+            return bytes != null
+                && bytes.Length >= 4
+                && bytes[0] == (byte)'N'
+                && bytes[1] == (byte)'H'
+                && bytes[2] == (byte)'M'
+                && bytes[3] == (byte)'1';
+        }
+
+        public static NeuralHeightmapModel FromBytes(byte[] bytes)
+        {
+            if (!LooksLikeBinary(bytes))
+            {
+                throw new ArgumentException("Model bytes do not start with NHM1.", nameof(bytes));
+            }
+
+            using (var stream = new MemoryStream(bytes))
+            using (var reader = new BinaryReader(stream, Encoding.UTF8))
+            {
+                string magic = Encoding.ASCII.GetString(reader.ReadBytes(4));
+                if (magic != "NHM1")
+                {
+                    throw new ArgumentException("Unsupported binary model magic '" + magic + "'.");
+                }
+
+                var parsed = new NeuralHeightmapModelData
+                {
+                    version = reader.ReadInt32(),
+                    tileWidth = reader.ReadInt32(),
+                    tileHeight = reader.ReadInt32(),
+                    frequencyCount = reader.ReadInt32(),
+                    hiddenWidth = reader.ReadInt32(),
+                    hiddenLayers = reader.ReadInt32()
+                };
+
+                int layerCount = reader.ReadInt32();
+                parsed.activation = "relu";
+                parsed.heightMin = 0f;
+                parsed.heightMax = 1f;
+                parsed.layers = new NeuralHeightmapLayerData[layerCount];
+
+                for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
+                {
+                    int inputSize = reader.ReadInt32();
+                    int outputSize = reader.ReadInt32();
+                    int weightsCount = reader.ReadInt32();
+                    int biasCount = reader.ReadInt32();
+                    var layer = new NeuralHeightmapLayerData
+                    {
+                        inputSize = inputSize,
+                        outputSize = outputSize,
+                        weights = new float[weightsCount],
+                        bias = new float[biasCount]
+                    };
+
+                    for (int i = 0; i < weightsCount; i++)
+                    {
+                        layer.weights[i] = reader.ReadSingle();
+                    }
+
+                    for (int i = 0; i < biasCount; i++)
+                    {
+                        layer.bias[i] = reader.ReadSingle();
+                    }
+
+                    parsed.layers[layerIndex] = layer;
+                }
+
+                parsed.metrics = new NeuralHeightmapMetricsData
+                {
+                    mse = reader.ReadSingle(),
+                    mae = reader.ReadSingle(),
+                    maxError = reader.ReadSingle(),
+                    sourceBytes = reader.ReadInt32(),
+                    modelBytes = reader.ReadInt32(),
+                    compressionRatio = reader.ReadSingle()
+                };
+
+                if (stream.Position != stream.Length)
+                {
+                    throw new ArgumentException("Binary model contains trailing bytes.");
+                }
+
+                return new NeuralHeightmapModel(parsed);
+            }
         }
 
         public float EvaluateHeight(Vector2 uv)
