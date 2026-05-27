@@ -217,7 +217,7 @@ namespace HeightmapAI.Editor
                         GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
                         cube.name = $"Sample_u{uIndex:000}_v{vIndex:000}";
                         cube.transform.SetParent(root.transform);
-                        cube.transform.position = new Vector3(u * 1000f, height, v * 1000f);
+                        cube.transform.position = new Vector3(u * 1000f, height * maxHeight, v * 1000f);
                         Undo.RegisterCreatedObjectUndo(cube, "Create Neural Heightmap Sample Cube");
                         created++;
                     }
