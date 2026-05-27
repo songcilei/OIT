@@ -13,6 +13,7 @@ namespace HeightmapAI.Editor
         private float evaluatedHeight;
         private bool hasEvaluation;
         private string statusMessage = "";
+        private int maxHeight = 150;
         private MessageType statusType = MessageType.Info;
 
         [MenuItem("Tools/Heightmap AI/Neural Heightmap Preview")]
@@ -43,15 +44,15 @@ namespace HeightmapAI.Editor
                 EditorGUILayout.Space();
                 EditorGUILayout.LabelField("Evaluate", EditorStyles.boldLabel);
                 uv = EditorGUILayout.Vector2Field("UV", uv);
-
                 if (GUILayout.Button("Evaluate Height", GUILayout.Height(28)))
                 {
                     EvaluateHeight();
                 }
 
+                maxHeight = EditorGUILayout.IntField("MaxHeight", maxHeight);
                 using (new EditorGUI.DisabledScope(!hasEvaluation))
                 {
-                    EditorGUILayout.FloatField("Height", evaluatedHeight);
+                    EditorGUILayout.FloatField("Height", evaluatedHeight*maxHeight);
                 }
 
                 EditorGUILayout.Space();
