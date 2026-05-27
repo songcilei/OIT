@@ -76,6 +76,16 @@ namespace HeightmapAI.Editor
         private void Export()
         {
         }
+
+        private IHeightmapSource CreateSource()
+        {
+            if (inputKind == InputKind.TerrainData)
+            {
+                return new TerrainDataHeightmapSource(terrainData);
+            }
+
+            return new TextureHeightmapSource(texture);
+        }
     }
 
     internal interface IHeightmapSource
@@ -107,5 +117,64 @@ namespace HeightmapAI.Editor
         public int Columns { get; }
         public int Rows { get; }
         public string OutputDirectory { get; }
+    }
+
+    internal sealed class TerrainDataHeightmapSource : IHeightmapSource
+    {
+        private readonly TerrainData terrainData;
+        private readonly float[,] heights;
+
+        public TerrainDataHeightmapSource(TerrainData terrainData)
+        {
+            this.terrainData = terrainData != null
+                ? terrainData
+                : throw new HeightmapSliceException("TerrainData is missing.");
+
+            Width = terrainData.heightmapResolution;
+            Height = terrainData.heightmapResolution;
+            heights = terrainData.GetHeights(0, 0, Width, Height);
+        }
+
+        public string Name => string.IsNullOrEmpty(terrainData.name) ? "TerrainData" : terrainData.name;
+        public int Width { get; }
+        public int Height { get; }
+
+        public float Sample(int x, int y)
+        {
+            return Mathf.Clamp01(heights[y, x]);
+        }
+    }
+
+    internal sealed class TextureHeightmapSource : IHeightmapSource
+    {
+        private readonly Texture2D texture;
+
+        public TextureHeightmapSource(Texture2D texture)
+        {
+            this.texture = texture != null
+                ? texture
+                : throw new HeightmapSliceException("Texture2D is missing.");
+
+            Width = texture.width;
+            Height = texture.height;
+
+            try
+            {
+                texture.GetPixel(0, 0);
+            }
+            catch (UnityException exception)
+            {
+                throw new HeightmapSliceException("Texture2D is not readable. Enable Read/Write in the texture import settings. " + exception.Message);
+            }
+        }
+
+        public string Name => string.IsNullOrEmpty(texture.name) ? "Texture2D" : texture.name;
+        public int Width { get; }
+        public int Height { get; }
+
+        public float Sample(int x, int y)
+        {
+            return Mathf.Clamp01(texture.GetPixel(x, y).grayscale);
+        }
     }
 }
