@@ -14,7 +14,10 @@ namespace HeightmapAI.Editor
         private bool hasEvaluation;
         private string statusMessage = "";
         private int maxHeight = 150;
+        private int uSamples = 16;
+        private int vSamples = 16;
         private MessageType statusType = MessageType.Info;
+        private const string SampleRootName = "Neural Heightmap Samples";
 
         [MenuItem("Tools/Heightmap AI/Neural Heightmap Preview")]
         private static void Open()
@@ -60,6 +63,15 @@ namespace HeightmapAI.Editor
                 if (GUILayout.Button("Save Reconstructed Preview PNG", GUILayout.Height(32)))
                 {
                     SaveReconstructedPreview();
+                }
+
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Scene Samples", EditorStyles.boldLabel);
+                uSamples = EditorGUILayout.IntField("U Samples", uSamples);
+                vSamples = EditorGUILayout.IntField("V Samples", vSamples);
+                if (GUILayout.Button("Create Cube Samples", GUILayout.Height(32)))
+                {
+                    CreateCubeSamples();
                 }
             }
 
@@ -167,6 +179,61 @@ namespace HeightmapAI.Editor
                     DestroyImmediate(texture);
                 }
 
+                Repaint();
+            }
+        }
+
+        private void CreateCubeSamples()
+        {
+            try
+            {
+                if (model == null)
+                {
+                    throw new InvalidOperationException("Load a model before creating cube samples.");
+                }
+
+                if (uSamples <= 0 || vSamples <= 0)
+                {
+                    throw new InvalidOperationException("U Samples and V Samples must be greater than zero.");
+                }
+
+                GameObject existing = GameObject.Find(SampleRootName);
+                if (existing != null)
+                {
+                    DestroyImmediate(existing);
+                }
+
+                GameObject root = new GameObject(SampleRootName);
+                Undo.RegisterCreatedObjectUndo(root, "Create Neural Heightmap Samples");
+
+                int created = 0;
+                for (int vIndex = 0; vIndex < vSamples; vIndex++)
+                {
+                    float v = vSamples == 1 ? 0f : (float)vIndex / (vSamples - 1);
+                    for (int uIndex = 0; uIndex < uSamples; uIndex++)
+                    {
+                        float u = uSamples == 1 ? 0f : (float)uIndex / (uSamples - 1);
+                        float height = model.EvaluateHeight(new Vector2(u, v));
+                        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        cube.name = $"Sample_u{uIndex:000}_v{vIndex:000}";
+                        cube.transform.SetParent(root.transform);
+                        cube.transform.position = new Vector3(u * 1000f, height, v * 1000f);
+                        Undo.RegisterCreatedObjectUndo(cube, "Create Neural Heightmap Sample Cube");
+                        created++;
+                    }
+                }
+
+                Selection.activeGameObject = root;
+                statusType = MessageType.Info;
+                statusMessage = $"Created {created} cube samples.";
+            }
+            catch (Exception exception)
+            {
+                statusType = MessageType.Error;
+                statusMessage = "Create samples failed: " + exception.Message;
+            }
+            finally
+            {
                 Repaint();
             }
         }
