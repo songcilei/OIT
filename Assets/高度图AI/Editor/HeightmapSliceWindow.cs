@@ -46,11 +46,13 @@ namespace HeightmapAI.Editor
             EditorGUILayout.LabelField("Tiles", EditorStyles.boldLabel);
             tileWidth = EditorGUILayout.IntField("Tile Width", tileWidth);
             tileHeight = EditorGUILayout.IntField("Tile Height", tileHeight);
+            tileWidth = Mathf.Max(1, tileWidth);
+            tileHeight = Mathf.Max(1, tileHeight);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Output", EditorStyles.boldLabel);
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.TextField("Folder", outputDirectory);
+            outputDirectory = EditorGUILayout.TextField("Folder", outputDirectory);
             if (GUILayout.Button("Browse", GUILayout.Width(80)))
             {
                 string selected = EditorUtility.OpenFolderPanel("Select Output Folder", outputDirectory, "");
@@ -75,6 +77,36 @@ namespace HeightmapAI.Editor
 
         private void Export()
         {
+            try
+            {
+                IHeightmapSource source = CreateSource();
+                var processor = new HeightmapSliceProcessor();
+                HeightmapSliceResult result = processor.ExportPngTiles(
+                    source,
+                    tileWidth,
+                    tileHeight,
+                    outputDirectory,
+                    (progress, message) => EditorUtility.DisplayProgressBar("Heightmap Slicer", message, progress));
+
+                statusType = MessageType.Info;
+                statusMessage = $"Exported {result.TileCount} PNG tiles ({result.Columns} x {result.Rows}) to {result.OutputDirectory}.";
+                AssetDatabase.Refresh();
+            }
+            catch (HeightmapSliceException exception)
+            {
+                statusType = MessageType.Error;
+                statusMessage = exception.Message;
+            }
+            catch (Exception exception)
+            {
+                statusType = MessageType.Error;
+                statusMessage = "Export failed: " + exception.Message;
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+                Repaint();
+            }
         }
 
         private IHeightmapSource CreateSource()
