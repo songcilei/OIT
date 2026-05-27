@@ -177,4 +177,98 @@ namespace HeightmapAI.Editor
             return Mathf.Clamp01(texture.GetPixel(x, y).grayscale);
         }
     }
+
+    internal sealed class HeightmapSliceProcessor
+    {
+        public HeightmapSliceResult ExportPngTiles(
+            IHeightmapSource source,
+            int tileWidth,
+            int tileHeight,
+            string outputDirectory,
+            Action<float, string> progress)
+        {
+            if (source == null)
+            {
+                throw new HeightmapSliceException("Input source is missing.");
+            }
+
+            if (tileWidth <= 0 || tileHeight <= 0)
+            {
+                throw new HeightmapSliceException("Tile width and height must be greater than zero.");
+            }
+
+            if (string.IsNullOrWhiteSpace(outputDirectory))
+            {
+                throw new HeightmapSliceException("Output folder is missing.");
+            }
+
+            int columns = source.Width / tileWidth;
+            int rows = source.Height / tileHeight;
+            if (columns <= 0 || rows <= 0)
+            {
+                throw new HeightmapSliceException($"Input size {source.Width}x{source.Height} is smaller than tile size {tileWidth}x{tileHeight}.");
+            }
+
+            Directory.CreateDirectory(outputDirectory);
+
+            string safeSourceName = MakeSafeFileName(source.Name);
+            int total = columns * rows;
+            int written = 0;
+
+            for (int row = 0; row < rows; row++)
+            {
+                for (int column = 0; column < columns; column++)
+                {
+                    progress?.Invoke((float)written / total, $"Writing tile {written + 1} / {total}");
+                    WriteTile(source, tileWidth, tileHeight, row, column, safeSourceName, outputDirectory);
+                    written++;
+                }
+            }
+
+            progress?.Invoke(1f, $"Wrote {written} PNG tiles.");
+            return new HeightmapSliceResult(written, columns, rows, outputDirectory);
+        }
+
+        private static void WriteTile(
+            IHeightmapSource source,
+            int tileWidth,
+            int tileHeight,
+            int row,
+            int column,
+            string safeSourceName,
+            string outputDirectory)
+        {
+            Texture2D tile = new Texture2D(tileWidth, tileHeight, TextureFormat.RGBA32, false, true);
+
+            for (int y = 0; y < tileHeight; y++)
+            {
+                for (int x = 0; x < tileWidth; x++)
+                {
+                    int sourceX = column * tileWidth + x;
+                    int sourceY = row * tileHeight + y;
+                    float height = Mathf.Clamp01(source.Sample(sourceX, sourceY));
+                    tile.SetPixel(x, y, new Color(height, height, height, 1f));
+                }
+            }
+
+            tile.Apply(false, false);
+            byte[] png = tile.EncodeToPNG();
+            UnityEngine.Object.DestroyImmediate(tile);
+
+            string fileName = $"{safeSourceName}_y{row:000}_x{column:000}.png";
+            string filePath = Path.Combine(outputDirectory, fileName);
+            File.WriteAllBytes(filePath, png);
+        }
+
+        private static string MakeSafeFileName(string name)
+        {
+            string safe = string.IsNullOrWhiteSpace(name) ? "heightmap" : name.Trim();
+            foreach (char invalid in Path.GetInvalidFileNameChars())
+            {
+                safe = safe.Replace(invalid, '_');
+            }
+
+            return safe;
+        }
+    }
 }
