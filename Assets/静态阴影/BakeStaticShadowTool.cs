@@ -17,6 +17,8 @@ public class BakeStaticShadowTool : MonoBehaviour
     public Material shadowMat;
     public GameObject DepthGenerateObj;
     public GameObject shadowPlane;
+
+    public bool autoHideDepthGameobject = true;
     [Button]
     public void BakeStaticShadow()
     {
@@ -34,22 +36,38 @@ public class BakeStaticShadowTool : MonoBehaviour
         shadowPlane.SetActive(false);
         ShadeUnilit.ReplaceObjectsShader(Shader.Find("Unlit/ShadowDepth"));
         cam.Render();
-        // ShadeUnilit.RevertObjectShader();
+        ShadeUnilit.RevertObjectShader();
 
         //Save rt 2 png
         SaveRt2Png(rt.width,rt,"shadowMap");
         //Set png 2 mat
-        
-        
-        DepthGenerateObj.SetActive(false);
+
+        if (autoHideDepthGameobject)
+        {
+            DepthGenerateObj.SetActive(false);
+        }
         shadowPlane.SetActive(true);
-        
+        // ShadeUnilit.SetAllObjectKey("_CUSTOMSHADOW",true);
+        // ShadeUnilit.SetAllObjectState("_CustomShadow", true);
+        Material shadowPlaneMat = shadowPlane.GetComponent<Renderer>().sharedMaterial;
+        shadowPlaneMat.SetInt("_CustomShadow", 1);
+        shadowPlaneMat.EnableKeyword("_CUSTOMSHADOW");
+        ShadeUnilit.SetAllObjectPass("ShadowCaster",false);
     }
 
     [Button]
     public void ResetShader()
     {
         ShadeUnilit.RevertObjectShader();
+        // ShadeUnilit.SetAllObjectKey("_CUSTOMSHADOW",false);
+        // ShadeUnilit.SetAllObjectState("_CustomShadow", false);
+        Material shadowPlaneMat = shadowPlane.GetComponent<Renderer>().sharedMaterial;
+        shadowPlaneMat.SetInt("_CustomShadow", 0);
+        shadowPlaneMat.DisableKeyword("_CUSTOMSHADOW");
+        
+        
+        ShadeUnilit.SetAllObjectPass("ShadowCaster",true);
+        
         GameObject.DestroyImmediate(root);
     }
     
@@ -61,7 +79,7 @@ public class BakeStaticShadowTool : MonoBehaviour
         //create root
         root = new GameObject();
         root.name = "root";
-        Vector3 center = new Vector3(BoundLength.x / 2, 0, BoundLength.z / 2);
+        Vector3 center = shadowPlane.transform.position;
         root.transform.position = center;
         root.transform.localScale = Vector3.one;
         root.transform.eulerAngles = new Vector3(0, 0, 0);
