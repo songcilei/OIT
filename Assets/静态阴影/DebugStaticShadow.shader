@@ -2,6 +2,7 @@ Shader "Unlit/DebugStaticShadow"
 {
     Properties
     {
+        _Color("Color",Color)=(1,1,1,1)
         _MainTex ("Texture", 2D) = "white" {}
         _Slider("Slider",Range(0,1))=1
         _offset("offset",Range(-0.1,0.1))=0
@@ -47,6 +48,7 @@ Shader "Unlit/DebugStaticShadow"
             float4x4 _SMat;
             float _Slider;
 
+            float4 _Color;
             float _offset;
             float _CustomShadow;
             TEXTURE2D(_MainTex);
@@ -136,13 +138,20 @@ Shader "Unlit/DebugStaticShadow"
 
             half4 frag (v2f i) : SV_TARGET
             {
+                float3 N = normalize(i.normal);
+                float3 L = normalize(_MainLightPosition.xyz);
+                    
+                
+                float NdotL  = saturate(dot(N,L)*0.5+0.5);
+                
+                
                 half realtimeShadow = 1;
                 // float3 shadowBiasPos = ApplyShadowBias(i.shadowPos.rgb,-i.normal.rgb,_MainLightPosition.rgb,float2(0.1f,0.1f));
                 float4 ScrPos =ComputeScreenPos(i.shadowPos);//等价与  float3 screenShadowUV = (i.shadowPos.xyz/i.shadowPos.w)*0.5+0.5;
                 // sample the texture
                 float dp = ScrPos.z/ScrPos.w;
                 
-                float3 adobe = SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,i.uv);
+                float3 adobe = SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,i.uv)*_Color*NdotL;
                 #ifdef _CUSTOMSHADOW  //自定义静态投影
                     float vdepth = SAMPLE_TEXTURE2D(_ShadowTex,sampler_ShadowTex,ScrPos.xy/ScrPos.w*_Slider).r;
                     #if UNITY_REVERSED_Z
@@ -155,13 +164,13 @@ Shader "Unlit/DebugStaticShadow"
                 
                     realtimeShadow = vdepth<(dp+_offset)?0:1;
 
-                #else//实时投影
+                #endif//实时投影
+                
                     float4 shadowCoord = TransformWorldToShadowCoord(i.worldPos);
-                    realtimeShadow = MainLightRealtimeShadow(shadowCoord);
-                #endif
+                    realtimeShadow *= MainLightRealtimeShadow(shadowCoord);
                 
                 
-                adobe = lerp(_ShadowColor,adobe,realtimeShadow);
+                adobe = lerp(_ShadowColor*adobe,adobe,realtimeShadow);
 
 
                 
@@ -179,55 +188,56 @@ Shader "Unlit/DebugStaticShadow"
             ENDHLSL
         }
 
-//        Pass
-//        {
-//            Name "ShadowCaster"
-//            Tags
-//            {
-//                "LightMode" = "ShadowCaster"
-//            }
-//
-//            // -------------------------------------
-//            // Render State Commands
-//            ZWrite On
-//            ZTest Always
-////            ColorMask 0
-//            Cull[_Cull]
-//
-//            HLSLPROGRAM
-//            #pragma target 2.0
-//
-//            // -------------------------------------
-//            // Shader Stages
-//            #pragma vertex vertDepth
-//            #pragma fragment fragDepth
-//
-//            // -------------------------------------
-//            // Material Keywords
-//            #pragma shader_feature_local _ALPHATEST_ON
-//            #pragma shader_feature_local_fragment _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-//
-//            //--------------------------------------
-//            // GPU Instancing
-//            #pragma multi_compile_instancing
-//            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DOTS.hlsl"
-//
-//            // -------------------------------------
-//            // Universal Pipeline keywords
-//
-//            // -------------------------------------
-//            // Unity defined keywords
-//            #pragma multi_compile_fragment _ LOD_FADE_CROSSFADE
-//
-//            // This is used during shadow map generation to differentiate between directional and punctual light shadows, as they use different formulas to apply Normal Bias
-//            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
-//
-//            // -------------------------------------
-//            // Includes
-//            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
-//            #include "Packages/com.unity.render-pipelines.universal/Shaders/ShadowCasterPass.hlsl"
-//            ENDHLSL
-//        }
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags
+            {
+                "LightMode" = "ShadowCaster"
+            }
+
+            // -------------------------------------
+            // Render State Commands
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+            Cull[_Cull]
+
+            HLSLPROGRAM
+            #pragma target 2.0
+
+            // -------------------------------------
+            // Shader Stages
+            // #pragma vertex vertDepth
+            // #pragma fragment fragDepth
+            #pragma vertex ShadowPassVertex
+            #pragma fragment ShadowPassFragment
+            // -------------------------------------
+            // Material Keywords
+            #pragma shader_feature_local _ALPHATEST_ON
+            #pragma shader_feature_local_fragment _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DOTS.hlsl"
+
+            // -------------------------------------
+            // Universal Pipeline keywords
+
+            // -------------------------------------
+            // Unity defined keywords
+            #pragma multi_compile_fragment _ LOD_FADE_CROSSFADE
+
+            // This is used during shadow map generation to differentiate between directional and punctual light shadows, as they use different formulas to apply Normal Bias
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+
+            // -------------------------------------
+            // Includes
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/ShadowCasterPass.hlsl"
+            ENDHLSL
+        }
 
     }
 }

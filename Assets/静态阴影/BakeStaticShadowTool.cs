@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -19,6 +20,22 @@ public class BakeStaticShadowTool : MonoBehaviour
     public GameObject shadowPlane;
 
     public bool autoHideDepthGameobject = true;
+
+    private void OnGUI()
+    {
+        Handles.BeginGUI();
+        if (GUILayout.Button("启动静态投影"))
+        {
+            BakeStaticShadow();
+        }
+
+        if (GUILayout.Button("关闭静态投影"))
+        {
+            ResetStaticShadow();
+        }
+        Handles.EndGUI();
+    }
+
     [Button]
     public void BakeStaticShadow()
     {
@@ -34,7 +51,7 @@ public class BakeStaticShadowTool : MonoBehaviour
         cam.targetTexture = rt;
         DepthGenerateObj.SetActive(true);
         shadowPlane.SetActive(false);
-        ShadeUnilit.ReplaceObjectsShader(Shader.Find("Unlit/ShadowDepth"));
+        ShadeUnilit.ReplaceObjectsShader(Shader.Find("Unlit/ShadowDepth"),6);
         cam.Render();
         ShadeUnilit.RevertObjectShader();
 
@@ -56,7 +73,7 @@ public class BakeStaticShadowTool : MonoBehaviour
     }
 
     [Button]
-    public void ResetShader()
+    public void ResetStaticShadow()
     {
         ShadeUnilit.RevertObjectShader();
         // ShadeUnilit.SetAllObjectKey("_CUSTOMSHADOW",false);
