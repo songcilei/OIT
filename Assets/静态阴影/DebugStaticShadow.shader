@@ -152,6 +152,7 @@ Shader "Unlit/DebugStaticShadow"
                 float dp = ScrPos.z/ScrPos.w;
                 
                 float3 adobe = SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,i.uv)*_Color*NdotL;
+                float dist =1;
                 #ifdef _CUSTOMSHADOW  //自定义静态投影
                     float vdepth = SAMPLE_TEXTURE2D(_ShadowTex,sampler_ShadowTex,ScrPos.xy/ScrPos.w*_Slider).r;
                     #if UNITY_REVERSED_Z
@@ -163,6 +164,9 @@ Shader "Unlit/DebugStaticShadow"
                     #endif
                 
                     realtimeShadow = vdepth<(dp+_offset)?0:1;
+                    
+                
+                    dist = saturate(1-smoothstep(0 ,0.07,(dp-vdepth)));//ESM 
 
                 #endif//实时投影
                 
@@ -170,7 +174,7 @@ Shader "Unlit/DebugStaticShadow"
                     realtimeShadow *= MainLightRealtimeShadow(shadowCoord);
                 
                 
-                adobe = lerp(_ShadowColor*adobe,adobe,realtimeShadow);
+                adobe = lerp(_ShadowColor*adobe,adobe,realtimeShadow+dist);
 
 
                 

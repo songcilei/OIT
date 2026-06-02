@@ -6,7 +6,6 @@ using Sirenix.OdinInspector;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
-
 public class BakeStaticShadowTool : MonoBehaviour
 {
 
