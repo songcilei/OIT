@@ -20,7 +20,7 @@ public class Triangle
         this.a = a;
         this.b = b;
         this.c = c;
-        //创建边框
+        //创建边框  生成三角形
         ab = Edge.FindEdge(a, b, edges);
         bc = Edge.FindEdge(b, c, edges);
         ac = Edge.FindEdge(a, c, edges);
@@ -75,19 +75,24 @@ public class Triangle
         }
     }
     
-    //相邻三角形
+    //传入每个不同的三角面  判断是否是相邻三角形
     public bool isNeighbor(Triangle target)
     {
+        // 1. 把当前三角形的所有边，复制到一个新集合里
         HashSet<Edge> intersection = new HashSet<Edge>(edges);
+        // 2. 只保留【两个三角形都有的边】（求交集）
         intersection.IntersectWith(target.edges);
+        // 3. 如果交集正好 = 1 条边 → 是邻居
         return intersection.Count == 1;
     }
 
     public List<Triangle> FindAllNeighborTriangles(List<Triangle> triangles)
     {
         List<Triangle> result = new List<Triangle>();
+        //遍历所有三角面 
         foreach (var triangle in triangles)
         {
+            //发现相邻的三角形 一条边是交集
             if (this.isNeighbor(triangle))
             {
                 result.Add(triangle);
@@ -116,18 +121,31 @@ public class Triangle
         exception.ExceptWith(NeighborEdge(neighbor).hexes);
         return exception.Single();
     }
+    /// 要合并的邻居三角形
     public void MergeNeighborTriangles(Triangle neighbor,List<Edge> edges,List<Triangle> triangles,List<Quad> quads)
     {
+        // 1. 找到【当前三角形】中，不参与公共边的那个独立顶点 a
         Vertex_hex a = IsolatedVertex_Self(neighbor);
+        // 2. 找到 a 的下一个顶点 b（公共边上的点）
         Vertex_hex b = vertices[(Array.IndexOf(vertices, a) + 1) % 3];
+        // 3. 找到【邻居三角形】中，不参与公共边的那个独立顶点 c
         Vertex_hex c = IsolatedVertex_Neighbor(neighbor);
+        // 4. 找到 c 的下一个顶点 d（公共边上的点）
         Vertex_hex d = neighbor.vertices[(Array.IndexOf(neighbor.vertices, c) + 1) % 3];
+        // 5. 用 a b c d 四个点 → 创建一个四边形
         Quad quad = new Quad(a, b, c, d, edges,quads);
+        // 6. 删掉两个三角形中间的【公共边】
         edges.Remove(NeighborEdge(neighbor));
+        // 7. 删掉原来的两个三角形
         triangles.Remove(this);
         triangles.Remove(neighbor);
     }
 
+    /// <summary>
+    /// 判断是否有相邻的三角形
+    /// </summary>
+    /// <param name="triangles"></param>
+    /// <returns></returns>
     public static bool HasNeighborTriangles(List<Triangle> triangles)
     {
         foreach (var a in triangles)
@@ -145,11 +163,16 @@ public class Triangle
     
     public static void RandomlyMergeTriangles(List<Edge> edges,List<Triangle> triangles,List<Quad> quads)
     {
+        // 1. 从所有三角形里，随机选一个
         int randomIndex = UnityEngine.Random.Range(0, triangles.Count);
+        // 2. 找到这个随机三角形的【所有邻居三角形】
         List<Triangle> neighbors = triangles[randomIndex].FindAllNeighborTriangles(triangles);
+        // 3. 如果它有邻居（不是孤立的）
         if (neighbors.Count!=0)
         {
+            // 4. 从邻居里再随机选一个
             int randomNeighborIndex = UnityEngine.Random.Range(0, neighbors.Count);
+            // 5. 把这两个三角形合并 → 变成四边形
             triangles[randomIndex].MergeNeighborTriangles(neighbors[randomNeighborIndex],edges,triangles,quads);
         }
     }
