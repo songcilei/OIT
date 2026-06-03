@@ -1,0 +1,27 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Edge
+{
+    public readonly HashSet<Vertex_hex> hexes;
+
+    public Edge(Vertex_hex a, Vertex_hex b, List<Edge> edges)
+    {
+        hexes = new HashSet<Vertex_hex>{a,b};
+        edges.Add(this);
+    }
+
+    public static Edge FindEdge(Vertex_hex a,Vertex_hex b,List<Edge> edges)
+    {
+        foreach (var edge in edges)
+        {
+            if (edge.hexes.Contains(a) && edge.hexes.Contains(b))
+            {
+                return edge;
+            }
+        }
+
+        return null;
+    }
+}

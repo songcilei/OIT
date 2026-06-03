@@ -13,6 +13,7 @@ public class GridGenerator : MonoBehaviour
 
     private void Awake()
     {
+        //创建Grid
         grid = new Grid(radius,cellSize);
     }
 
@@ -34,6 +35,14 @@ public class GridGenerator : MonoBehaviour
                 Gizmos.DrawSphere((triangle.a.coord.worldPosition + triangle.b.coord.worldPosition+triangle.c.coord.worldPosition)/3,0.05f);
             }
 
+            Gizmos.color = Color.green;
+            foreach (Quad quad in grid.quads)
+            {
+                Gizmos.DrawLine(quad.a.coord.worldPosition,quad.b.coord.worldPosition);
+                Gizmos.DrawLine(quad.b.coord.worldPosition,quad.c.coord.worldPosition);
+                Gizmos.DrawLine(quad.c.coord.worldPosition,quad.d.coord.worldPosition);
+                Gizmos.DrawLine(quad.d.coord.worldPosition,quad.a.coord.worldPosition);
+            }
 
         }
     }
