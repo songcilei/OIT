@@ -21,6 +21,7 @@ public class GridGenerator : MonoBehaviour
     {
         if (grid!=null)
         {
+            Gizmos.color = Color.yellow;
             foreach (Vertex_hex vertex in grid.hexes)
             {
                 Gizmos.DrawSphere(vertex.coord.worldPosition,0.3f);
@@ -44,6 +45,25 @@ public class GridGenerator : MonoBehaviour
                 Gizmos.DrawLine(quad.d.coord.worldPosition,quad.a.coord.worldPosition);
             }
 
+            Gizmos.color = Color.red;
+            foreach (var mid in grid.mids)
+            {
+                Gizmos.DrawSphere(mid.initialPosition,0.2f);
+            }
+
+            Gizmos.color = Color.cyan;
+            foreach (var center in grid.centers)
+            {
+                Gizmos.DrawSphere(center.initialPosition,0.2f);
+            }
+            Gizmos.color = Color.white;
+            foreach (var subQuad in grid.subQuads)
+            {
+                Gizmos.DrawLine(subQuad.a.initialPosition,subQuad.b.initialPosition);
+                Gizmos.DrawLine(subQuad.b.initialPosition,subQuad.c.initialPosition);
+                Gizmos.DrawLine(subQuad.c.initialPosition,subQuad.d.initialPosition);
+                Gizmos.DrawLine(subQuad.d.initialPosition,subQuad.a.initialPosition);
+            }
         }
     }
 }

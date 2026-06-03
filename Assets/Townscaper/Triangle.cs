@@ -15,7 +15,9 @@ public class Triangle
     public readonly Edge ac;
 
     public readonly Edge[] edges;
-    public Triangle(Vertex_hex a,Vertex_hex b, Vertex_hex c,List<Edge> edges,List<Triangle> triangles)
+
+    public readonly Vertex_TriangleCenter center;
+    public Triangle(Vertex_hex a,Vertex_hex b, Vertex_hex c,List<Vertex_mid> mids,List<Vertex_center> centers,List<Edge> edges,List<Triangle> triangles)
     {
         this.a = a;
         this.b = b;
@@ -27,27 +29,30 @@ public class Triangle
         vertices = new Vertex_hex[] { a, b, c };
         if (ab == null)
         {
-            ab = new Edge(a, b, edges);
+            ab = new Edge(a, b, mids,edges);
         }
 
         if (bc == null)
         {
-            bc = new Edge(b, c, edges);
+            bc = new Edge(b, c, mids,edges);
         }
 
         if (ac == null)
         {
-            ac = new Edge(a, c, edges);
+            ac = new Edge(a, c, mids,edges);
         }
 
         this.edges = new Edge[] { ab, bc, ac };
+        center = new Vertex_TriangleCenter(this);
+        
         triangles.Add(this);
+        centers.Add(center);
     }
 
-    public static void Triangles_Ring(int radius,List<Vertex_hex> vertices,List<Edge> edges,List<Triangle> triangles)
+    public static void Triangles_Ring(int radius,List<Vertex_hex> hexes,List<Vertex_mid> mids,List<Vertex_center> centers,List<Edge> edges,List<Triangle> triangles)
     {
-        List<Vertex_hex> inner = Vertex_hex.GrabRing(radius - 1, vertices);
-        List<Vertex_hex> outer = Vertex_hex.GrabRing(radius, vertices);
+        List<Vertex_hex> inner = Vertex_hex.GrabRing(radius - 1, hexes);
+        List<Vertex_hex> outer = Vertex_hex.GrabRing(radius, hexes);
         for (int i = 0; i < 6; i++)
         {
             for (int j = 0; j < radius; j++)
@@ -56,22 +61,22 @@ public class Triangle
                 Vertex_hex a = outer[i * radius + j];
                 Vertex_hex b = outer[(i * radius + j + 1) % outer.Count];
                 Vertex_hex c = inner[(i * (radius - 1) + j) % inner.Count];
-                new Triangle(a, b, c,edges,triangles);
+                new Triangle(a, b, c,mids,centers,edges,triangles);
                 //创建一个顶点在外圈，两个顶点在内圈的三角形
                 if (j>0)
                 {
                     Vertex_hex d = inner[i * (radius - 1) + j - 1];
-                    new Triangle(a, c, d,edges,triangles);
+                    new Triangle(a, c, d,mids,centers,edges,triangles);
                 }
             }
         }
     }
 
-    public static void Triangles_Hex(List<Vertex_hex> vertices,List<Edge> edges,List<Triangle>triangles)
+    public static void Triangles_Hex(List<Vertex_hex> hexes,List<Vertex_mid> mids,List<Vertex_center> centers,List<Edge> edges,List<Triangle>triangles)
     {
         for (int i = 1; i < Grid.radius; i++)
         {
-            Triangles_Ring(i,vertices,edges,triangles);
+            Triangles_Ring(i,hexes,mids,centers,edges,triangles);
         }
     }
     
@@ -122,7 +127,7 @@ public class Triangle
         return exception.Single();
     }
     /// 要合并的邻居三角形
-    public void MergeNeighborTriangles(Triangle neighbor,List<Edge> edges,List<Triangle> triangles,List<Quad> quads)
+    public void MergeNeighborTriangles(Triangle neighbor,List<Vertex_mid> mids,List<Vertex_center> centers,List<Edge> edges,List<Triangle> triangles,List<Quad> quads)
     {
         // 1. 找到【当前三角形】中，不参与公共边的那个独立顶点 a
         Vertex_hex a = IsolatedVertex_Self(neighbor);
@@ -133,9 +138,14 @@ public class Triangle
         // 4. 找到 c 的下一个顶点 d（公共边上的点）
         Vertex_hex d = neighbor.vertices[(Array.IndexOf(neighbor.vertices, c) + 1) % 3];
         // 5. 用 a b c d 四个点 → 创建一个四边形
-        Quad quad = new Quad(a, b, c, d, edges,quads);
+        Quad quad = new Quad(a, b, c, d, centers,edges,quads);
         // 6. 删掉两个三角形中间的【公共边】
         edges.Remove(NeighborEdge(neighbor));
+        mids.Remove(NeighborEdge(neighbor).mid);
+
+        centers.Remove(this.center);
+        centers.Remove(neighbor.center);
+        
         // 7. 删掉原来的两个三角形
         triangles.Remove(this);
         triangles.Remove(neighbor);
@@ -161,7 +171,7 @@ public class Triangle
         return false;
     }
     
-    public static void RandomlyMergeTriangles(List<Edge> edges,List<Triangle> triangles,List<Quad> quads)
+    public static void RandomlyMergeTriangles(List<Vertex_mid> mids,List<Vertex_center> centers,List<Edge> edges,List<Triangle> triangles,List<Quad> quads)
     {
         // 1. 从所有三角形里，随机选一个
         int randomIndex = UnityEngine.Random.Range(0, triangles.Count);
@@ -173,7 +183,17 @@ public class Triangle
             // 4. 从邻居里再随机选一个
             int randomNeighborIndex = UnityEngine.Random.Range(0, neighbors.Count);
             // 5. 把这两个三角形合并 → 变成四边形
-            triangles[randomIndex].MergeNeighborTriangles(neighbors[randomNeighborIndex],edges,triangles,quads);
+            triangles[randomIndex].MergeNeighborTriangles(neighbors[randomNeighborIndex],mids,centers,edges,triangles,quads);
         }
+    }
+
+    public void Subdivide(List<SubQuad> subQuads)
+    {
+        SubQuad quad_a = new SubQuad(a, ab.mid, center, ac.mid);
+        SubQuad quad_b = new SubQuad(b, bc.mid, center, ab.mid);
+        SubQuad quad_c = new SubQuad(c, ac.mid, center, bc.mid);
+        subQuads.Add(quad_a);
+        subQuads.Add(quad_b);
+        subQuads.Add(quad_c);
     }
 }

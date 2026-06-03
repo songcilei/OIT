@@ -1,10 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class Vertex
 {
-
+    public Vector3 initialPosition;
 }
 
 public class Coord//Cube Coord
@@ -106,6 +107,7 @@ public class Vertex_hex : Vertex
     public Vertex_hex(Coord coord)
     {
         this.coord = coord;
+        initialPosition = coord.WorldPosition();
     }
 
     public static void Hex(List<Vertex_hex> vertices)
@@ -126,3 +128,36 @@ public class Vertex_hex : Vertex
         return vertices.GetRange(radius * (radius - 1) * 3 + 1, radius * 6);
     }
 }
+
+public class Vertex_mid : Vertex
+{
+    public Vertex_mid(Edge edge,List<Vertex_mid> mids)
+    {
+        Vertex_hex a = edge.hexes.ToArray()[0];
+        Vertex_hex b = edge.hexes.ToArray()[1];
+        mids.Add(this);
+        initialPosition = (a.initialPosition + b.initialPosition) / 2;
+    }
+}
+
+public class Vertex_center : Vertex
+{
+}
+
+public class Vertex_TriangleCenter : Vertex_center
+{
+    public Vertex_TriangleCenter(Triangle triangle)
+    {
+        initialPosition = (triangle.a.initialPosition + triangle.b.initialPosition + triangle.c.initialPosition) / 3;
+    }
+}
+
+public class Vertex_quadCenter : Vertex_center
+{
+    public Vertex_quadCenter(Quad quad)
+    {
+        initialPosition = (quad.a.initialPosition + quad.b.initialPosition + quad.c.initialPosition + quad.d.initialPosition) / 4;
+    }
+}
+
+
