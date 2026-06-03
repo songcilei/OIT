@@ -24,6 +24,17 @@ public class GridGenerator : MonoBehaviour
             {
                 Gizmos.DrawSphere(vertex.coord.worldPosition,0.3f);
             }
+
+            Gizmos.color = Color.yellow;
+            foreach (var triangle in grid.triangles)
+            {
+                Gizmos.DrawLine(triangle.a.coord.worldPosition,triangle.b.coord.worldPosition);
+                Gizmos.DrawLine(triangle.b.coord.worldPosition,triangle.c.coord.worldPosition);
+                Gizmos.DrawLine(triangle.c.coord.worldPosition,triangle.a.coord.worldPosition);
+                Gizmos.DrawSphere((triangle.a.coord.worldPosition + triangle.b.coord.worldPosition+triangle.c.coord.worldPosition)/3,0.05f);
+            }
+
+
         }
     }
 }
