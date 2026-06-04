@@ -187,6 +187,10 @@ public class Triangle
         }
     }
 
+    /// <summary>
+    /// 细分三角面
+    /// </summary>
+    /// <param name="subQuads"></param>
     public void Subdivide(List<SubQuad> subQuads)
     {
         SubQuad quad_a = new SubQuad(a, ab.mid, center, ac.mid);

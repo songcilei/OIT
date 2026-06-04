@@ -37,7 +37,7 @@ public class GridGenerator : MonoBehaviour
             }
 
             Gizmos.color = Color.green;
-            foreach (Quad quad in grid.quads)
+            foreach (Quad quad in grid.quads)//绘制四边形
             {
                 Gizmos.DrawLine(quad.a.coord.worldPosition,quad.b.coord.worldPosition);
                 Gizmos.DrawLine(quad.b.coord.worldPosition,quad.c.coord.worldPosition);
@@ -52,12 +52,12 @@ public class GridGenerator : MonoBehaviour
             }
 
             Gizmos.color = Color.cyan;
-            foreach (var center in grid.centers)
+            foreach (var center in grid.centers)//绘制中心点
             {
                 Gizmos.DrawSphere(center.initialPosition,0.2f);
             }
             Gizmos.color = Color.white;
-            foreach (var subQuad in grid.subQuads)
+            foreach (var subQuad in grid.subQuads)//绘制子四边形
             {
                 Gizmos.DrawLine(subQuad.a.initialPosition,subQuad.b.initialPosition);
                 Gizmos.DrawLine(subQuad.b.initialPosition,subQuad.c.initialPosition);

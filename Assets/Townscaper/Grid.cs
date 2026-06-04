@@ -30,11 +30,12 @@ public class Grid
             Triangle.RandomlyMergeTriangles(mids,centers,edges,triangles,quads);//随机合并相邻的三角形
         }
 
+        //三角形细分
         foreach (var triangle in triangles)
         {
             triangle.Subdivide(subQuads);
         }
-
+        //四边形细分
         foreach (var quad in quads)
         {
             quad.Subdivide(subQuads);
