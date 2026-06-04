@@ -406,8 +406,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dacb5516110e746ca9895439c208e126, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  radius: 7
+  radius: 5
   cellSize: 1
+  relaxTimes: 10
 --- !u!4 &1085015258
 Transform:
   m_ObjectHideFlags: 0

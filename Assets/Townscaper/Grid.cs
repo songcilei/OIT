@@ -9,14 +9,14 @@ public class Grid
     public readonly List<Vertex_hex> hexes = new List<Vertex_hex>();
     public readonly List<Vertex_mid> mids = new List<Vertex_mid>();
     public readonly List<Vertex_center> centers = new List<Vertex_center>();
-    
+    public readonly List<Vertex> vertices = new List<Vertex>();
     public readonly List<Edge> edges = new List<Edge>();
     public readonly List<Triangle> triangles = new List<Triangle>();
     public readonly List<Quad> quads = new List<Quad>();
 
     public readonly List<SubQuad> subQuads = new List<SubQuad>();
     
-    public Grid(int radius,float cellSize)
+    public Grid(int radius,float cellSize,int relaxTimes)
     {
         Grid.radius = radius;
         Grid.cellSize = cellSize;
@@ -30,6 +30,11 @@ public class Grid
             Triangle.RandomlyMergeTriangles(mids,centers,edges,triangles,quads);//随机合并相邻的三角形
         }
 
+        vertices.AddRange(hexes);
+        vertices.AddRange(mids);
+        vertices.AddRange(centers);
+        
+        
         //三角形细分
         foreach (var triangle in triangles)
         {
@@ -39,6 +44,19 @@ public class Grid
         foreach (var quad in quads)
         {
             quad.Subdivide(subQuads);
+        }
+
+        for (int i = 0; i < relaxTimes; i++)
+        {
+            foreach (var subQuad in subQuads)//每个顶点在不同的subQuad中的平滑偏移值都会累计起来
+            {
+                subQuad.CalculateRelaxoffset();//旋转原有点 
+            }
+
+            foreach (var vertex in vertices)
+            {
+                vertex.Relax();
+            }
         }
     }
 }

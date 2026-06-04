@@ -173,7 +173,7 @@ public class Triangle
     
     public static void RandomlyMergeTriangles(List<Vertex_mid> mids,List<Vertex_center> centers,List<Edge> edges,List<Triangle> triangles,List<Quad> quads)
     {
-        // 1. 从所有三角形里，随机选一个
+        // 1. 从所有三角形里，随机选一个 
         int randomIndex = UnityEngine.Random.Range(0, triangles.Count);
         // 2. 找到这个随机三角形的【所有邻居三角形】
         List<Triangle> neighbors = triangles[randomIndex].FindAllNeighborTriangles(triangles);
@@ -193,11 +193,11 @@ public class Triangle
     /// <param name="subQuads"></param>
     public void Subdivide(List<SubQuad> subQuads)
     {
-        SubQuad quad_a = new SubQuad(a, ab.mid, center, ac.mid);
-        SubQuad quad_b = new SubQuad(b, bc.mid, center, ab.mid);
-        SubQuad quad_c = new SubQuad(c, ac.mid, center, bc.mid);
-        subQuads.Add(quad_a);
-        subQuads.Add(quad_b);
-        subQuads.Add(quad_c);
+        SubQuad quad_a = new SubQuad(a, ab.mid, center, ac.mid,subQuads);
+        SubQuad quad_b = new SubQuad(b, bc.mid, center, ab.mid,subQuads);
+        SubQuad quad_c = new SubQuad(c, ac.mid, center, bc.mid,subQuads);
+        // subQuads.Add(quad_a);
+        // subQuads.Add(quad_b);
+        // subQuads.Add(quad_c);
     }
 }

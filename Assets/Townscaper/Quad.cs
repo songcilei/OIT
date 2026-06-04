@@ -37,14 +37,14 @@ public class Quad
   /// <param name="subQuads"></param>
   public void Subdivide(List<SubQuad> subQuads)
   {
-    SubQuad quad_a = new SubQuad(a, ab.mid, center, ad.mid);
-    SubQuad quad_b = new SubQuad(b, bc.mid, center, ab.mid);
-    SubQuad quad_c = new SubQuad(c, cd.mid, center, bc.mid);
-    SubQuad quad_d = new SubQuad(d, ad.mid, center, cd.mid);
-    subQuads.Add(quad_a);
-    subQuads.Add(quad_b);
-    subQuads.Add(quad_c);
-    subQuads.Add(quad_d);
+    SubQuad quad_a = new SubQuad(a, ab.mid, center, ad.mid,subQuads);
+    SubQuad quad_b = new SubQuad(b, bc.mid, center, ab.mid,subQuads);
+    SubQuad quad_c = new SubQuad(c, cd.mid, center, bc.mid,subQuads);
+    SubQuad quad_d = new SubQuad(d, ad.mid, center, cd.mid,subQuads);
+    // subQuads.Add(quad_a);
+    // subQuads.Add(quad_b);
+    // subQuads.Add(quad_c);
+    // subQuads.Add(quad_d);
   }
   
 }

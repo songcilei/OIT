@@ -6,6 +6,13 @@ using UnityEngine;
 public class Vertex
 {
     public Vector3 initialPosition;
+    public Vector3 currentPosition;
+    public Vector3 offset = Vector3.zero;
+
+    public void Relax()
+    {
+        currentPosition = initialPosition + offset;
+    }
 }
 
 public class Coord//Cube Coord
@@ -108,6 +115,7 @@ public class Vertex_hex : Vertex
     {
         this.coord = coord;
         initialPosition = coord.WorldPosition();
+        currentPosition = initialPosition;
     }
 
     public static void Hex(List<Vertex_hex> vertices)
@@ -137,6 +145,7 @@ public class Vertex_mid : Vertex
         Vertex_hex b = edge.hexes.ToArray()[1];
         mids.Add(this);
         initialPosition = (a.initialPosition + b.initialPosition) / 2;
+        currentPosition = initialPosition;
     }
 }
 
@@ -149,6 +158,7 @@ public class Vertex_TriangleCenter : Vertex_center
     public Vertex_TriangleCenter(Triangle triangle)
     {
         initialPosition = (triangle.a.initialPosition + triangle.b.initialPosition + triangle.c.initialPosition) / 3;
+        currentPosition = initialPosition;
     }
 }
 
@@ -157,6 +167,7 @@ public class Vertex_quadCenter : Vertex_center
     public Vertex_quadCenter(Quad quad)
     {
         initialPosition = (quad.a.initialPosition + quad.b.initialPosition + quad.c.initialPosition + quad.d.initialPosition) / 4;
+        currentPosition = initialPosition;
     }
 }
 
