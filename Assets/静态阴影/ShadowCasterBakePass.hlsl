@@ -123,6 +123,7 @@ float4 ShadowPassFragment(Varyings input) : SV_TARGET
     #endif
 
     float4 depth = (input.positionCS.z/input.positionCS.w);
+    depth.g = depth.r*depth.r;
     // float dd = UnpackDepth(depth);
     return depth;
     //return float4(input.positionCS.zzz*0.5+0.5, 1.0f);

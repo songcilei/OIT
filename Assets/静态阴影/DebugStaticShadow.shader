@@ -7,6 +7,11 @@ Shader "Unlit/DebugStaticShadow"
         _Slider("Slider",Range(0,1))=1
         _offset("offset",Range(-0.1,0.1))=0
 //        [Toggle(_CUSTOMSHADOW)] _CustomShadow("customShadow",Int)=0
+        
+        
+        [Toggle(_ESM)] _esm("指数阴影",Int) =0
+        _EValue("Evalue",Float)=1
+        [Toggle(_VSM)] _vsm("方差阴影",Int) = 0
         _ShadowTex("ShadowTex",2D)="black"{}
         _ShadowColor("ShadowColor",Color) = (0.5,0.5,0.5,1)
     }
@@ -55,56 +60,12 @@ Shader "Unlit/DebugStaticShadow"
             SAMPLER(sampler_MainTex);
             float4 _MainTex_ST;
             float4 _ShadowColor;
-            
+            float _EValue;
             TEXTURE2D(_ShadowTex);
             SAMPLER(sampler_ShadowTex);
             
-            inline float GammaToLinearSpaceExact (float value)
-            {
-		        if (value <= 0.04045F)
-			        return value / 12.92F;
-		        else if (value < 1.0F)
-			        return pow((value + 0.055F)/1.055F, 2.4F);
-		        else
-			        return pow(value, 2.2F);
-            }
-            
-            
-            inline half3 GammaToLinearSpace (half3 sRGB)
-            {
-		            // Approximate version from http://chilliant.blogspot.com.au/2012/08/srgb-approximations-for-hlsl.html?m=1
-		            return sRGB * (sRGB * (sRGB * 0.305306011h + 0.682171111h) + 0.012522878h);
 
-
-		            // Precise version, useful for debugging.
-		            //return half3(GammaToLinearSpaceExact(sRGB.r), GammaToLinearSpaceExact(sRGB.g), GammaToLinearSpaceExact(sRGB.b));
-            }
-            
-            inline half3 LinearToGammaSpace (half3 linRGB)
-            {
-		            linRGB = max(linRGB, half3(0.h, 0.h, 0.h));
-		            // An almost-perfect approximation from http://chilliant.blogspot.com.au/2012/08/srgb-approximations-for-hlsl.html?m=1
-		            return max(1.055h * pow(linRGB, 0.416666667h) - 0.055h, 0.h);
-		            
-		            // Exact version, useful for debugging.
-		            //return half3(LinearToGammaSpaceExact(linRGB.r), LinearToGammaSpaceExact(linRGB.g), LinearToGammaSpaceExact(linRGB.b))
-            }
-            
-            v2f vertDepth (appdata v)
-            { 
-                v2f o;
-                float3 worldPos = mul(UNITY_MATRIX_M, v.vertex);
-                o.worldPos = worldPos;
-                o.vertex = mul(UNITY_MATRIX_VP,float4(worldPos,1));
-                
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                o.normal = mul(UNITY_MATRIX_M,float4(v.normal.xyz,0)).xyz;
-                o.shadowPos = mul(_SMat, float4(worldPos,1));
-
-                // o.vertex=o.shadowPos;
-                // o.vertex.z = col.r;
-                return o;
-            }
+ 
             v2f vert (appdata v)
             {
                 v2f o;
@@ -129,12 +90,7 @@ Shader "Unlit/DebugStaticShadow"
                 return positionWS;
             }
             
-            float fragDepth(v2f i):SV_Depth{
-                float4 ScrPos =ComputeScreenPos(i.shadowPos);
-                float4 shadow = SAMPLE_TEXTURE2D_LOD(_ShadowTex,sampler_ShadowTex,ScrPos.xy/ScrPos.w*_Slider,0);
-                return LinearToGammaSpace(shadow.r);
-            }
-            
+ 
 
             half4 frag (v2f i) : SV_TARGET
             {
@@ -150,31 +106,52 @@ Shader "Unlit/DebugStaticShadow"
                 float4 ScrPos =ComputeScreenPos(i.shadowPos);//等价与  float3 screenShadowUV = (i.shadowPos.xyz/i.shadowPos.w)*0.5+0.5;
                 // sample the texture
                 float dp = ScrPos.z/ScrPos.w;
-                
                 float3 adobe = SAMPLE_TEXTURE2D(_MainTex,sampler_MainTex,i.uv)*_Color*NdotL;
                 float dist =1;
                 #ifdef _CUSTOMSHADOW  //自定义静态投影
-                    float vdepth = SAMPLE_TEXTURE2D(_ShadowTex,sampler_ShadowTex,ScrPos.xy/ScrPos.w*_Slider).r;
+                    float2 vdepth = SAMPLE_TEXTURE2D(_ShadowTex,sampler_ShadowTex,ScrPos.xy/ScrPos.w*_Slider).rg;
                     #if UNITY_REVERSED_Z
                         dp = 1 - dp; //(1, 0)-->(0, 1)
-                        vdepth = 1-vdepth;
+                        vdepth.x = 1-vdepth.x;
                     #else
                         dp = dp * 0.5 + 0.5; //(-1, 1)-->(0, 1)  这里是Opengl的Z 是 (-1, 1)
                         //depth = depth*0.5+0.5; //这里 不用  是因为Depth 本身就是NDC 坐标系下的0-1
                     #endif
                 
                     realtimeShadow = vdepth<(dp+_offset)?0:1;
-                    
                 
-                    dist = saturate(1-smoothstep(0 ,0.07,(dp-vdepth)));//ESM 
+                    #ifdef _ESM
+                        float ddp =  dp-vdepth.x ;//当前深度-遮挡深度
+                        realtimeShadow =  1-exp(_EValue*ddp); //本质是指数阴影 和 shadowmap分辨率相关 
+                    #endif    
+                    //
+                    #ifdef _VSM
+                         float depth =  dp-vdepth.x;
+                         float variance = vdepth.y - (vdepth.x*vdepth.x);//方差
+                         float p = (variance)/(variance + depth*depth);//单边切比雪夫不等式 p=投影命中的概率 
+                         realtimeShadow = 1-max(saturate(p),dp<vdepth.x?0:1);
+                    
+                    #endif
+                
+                // return float4(realtimeShadow.rrr,1);
+                    // dist = saturate(1-smoothstep(0 ,0.07,(dp-vdepth)));//ESM 
 
                 #endif//实时投影
                 
                     float4 shadowCoord = TransformWorldToShadowCoord(i.worldPos);
-                    realtimeShadow *= MainLightRealtimeShadow(shadowCoord);
                 
+
+                    float atten = MainLightRealtimeShadow(shadowCoord);
+                #ifdef _ESM
+                    float Rddp = atten-dp;
+                    //realtimeShadow *= (exp(_EValue*Rddp));
+                    realtimeShadow *= atten;
                 
-                adobe = lerp(_ShadowColor*adobe,adobe,realtimeShadow+dist);
+                #else
+                    realtimeShadow *= atten;
+                #endif
+                
+                adobe = lerp(_ShadowColor*adobe,adobe,realtimeShadow);
 
 
                 
@@ -189,6 +166,8 @@ Shader "Unlit/DebugStaticShadow"
             #pragma fragment frag
             #pragma multi_compile _ _CUSTOMSHADOW
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            #pragma multi_compile _ _ESM
+            #pragma multi_compile _ _VSM
             ENDHLSL
         }
 

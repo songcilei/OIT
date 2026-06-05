@@ -408,7 +408,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   radius: 5
   cellSize: 1
-  relaxTimes: 10
+  relaxTimes: 5
 --- !u!4 &1085015258
 Transform:
   m_ObjectHideFlags: 0

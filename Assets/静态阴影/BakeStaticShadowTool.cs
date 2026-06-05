@@ -6,6 +6,8 @@ using Sirenix.OdinInspector;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using Object = System.Object;
+
 public class BakeStaticShadowTool : MonoBehaviour
 {
 
@@ -32,6 +34,27 @@ public class BakeStaticShadowTool : MonoBehaviour
         {
             ResetStaticShadow();
         }
+
+        if (GUILayout.Button("开启ESM"))
+        {
+            EnableEsm(true);
+        }
+        if (GUILayout.Button("关闭ESM阴影"))
+        {
+            EnableEsm(false);
+        }
+
+
+        if (GUILayout.Button("开启VSM阴影"))
+        {
+            EnableVsm(true);
+        }
+        
+        if (GUILayout.Button("关闭VSM阴影"))
+        {
+            EnableVsm(false);
+        }
+        
         Handles.EndGUI();
     }
 
@@ -86,8 +109,50 @@ public class BakeStaticShadowTool : MonoBehaviour
         
         GameObject.DestroyImmediate(root);
     }
+
+    [Button]
+    public void EnableEsm(bool state)
+    {
+        Material shadowPlaneMat = shadowPlane.GetComponent<Renderer>().sharedMaterial;
+
+        if (state)
+        {
+            shadowPlaneMat.EnableKeyword("_ESM");
+        }
+        else
+        {
+            shadowPlaneMat.DisableKeyword("_ESM");
+        }
+        
+    }
+
+    [Button]
+    public void EnableVsm(bool state)
+    {
+        Material shadowPlaneMat = shadowPlane.GetComponent<Renderer>().sharedMaterial;
+
+        if (state)
+        {
+            shadowPlaneMat.EnableKeyword("_VSM");
+        }
+        else
+        {
+            shadowPlaneMat.DisableKeyword("_VSM");
+        }
+    }
     
-    
+
+    [Button]
+    public void Test()
+    {
+        Object[] objs = Selection.gameObjects;
+        foreach (var o in objs)
+        {
+            GameObject obj = o as GameObject;
+            var mat = obj.GetComponent<Renderer>().sharedMaterial;
+            mat.SetShaderPassEnabled("ShadowCaster",true);
+        }
+    }
     
 
     private Camera ComputeCamPos(Vector3 BoundLength, float CamDist = 1)

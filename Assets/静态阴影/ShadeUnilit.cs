@@ -113,6 +113,7 @@ public static class ShadeUnilit
                 continue;
             }
             info.mat.SetShaderPassEnabled(passName, enable);
+            Debug.Log("name:"+info.mat.name + ":::" + passName + "::"+enable);
         }
     }
 }
