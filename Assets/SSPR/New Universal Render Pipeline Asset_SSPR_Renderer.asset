@@ -137,7 +137,7 @@ MonoBehaviour:
   m_Active: 1
   mSettings:
     RTSize: 1024
-    ReflectHeight: 0
+    ReflectHeight: 0.22
     StretchIntensity: 0.1
-    StretchThreshold: 1
-    EdgeFadeOut: 0.6
+    StretchThreshold: 0
+    EdgeFadeOut: 0.93
