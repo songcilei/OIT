@@ -1,0 +1,105 @@
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#pragma kernel CSMain
+
+RWTexture2D<half4> _SSPRReflectionTexture;
+RWTexture2D<float> _SSPRHeightBuffer;
+
+Texture2D<float4> _CameraColorTexture;
+Texture2D<float4> _CameraDepthTexture;
+
+SAMPLER(sampler_CameraDepthTexture);
+SAMPLER(sampler_CameraColorTexture);
+
+float4 _SSPRReflectionSize;//screenWidth screenHeight  1/ScreenWidth  1/ScreenHeight
+float _ReflectPlaneHeight;
+
+
+float _EdgeFadeOut;
+
+float4 _StretchParams;//instensity   StretchThreshold
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    //初始化buffer
+    _SSPRReflectionTexture[id.xy] = half4(0.0,0.0,0.0,0.0);
+    _SSPRHeightBuffer[id.xy] = HALF_MAX;
+    
+    //计算屏幕uv  DispatchThreadID:当前线程组在所有线程组里的ID,即图像pos
+    float2 uv = id.xy * _SSPRReflectionSize.zw;
+    
+    float depth = _CameraDepthTexture.SampleLevel(sampler_CameraDepthTexture,uv,0).r;
+    //天空盒子截断
+    float linearDepth = Linear01Depth(depth, _ZBufferParams);
+    if(linearDepth > 0.99) return;// 跳过天空盒
+    
+    //根据深度还原世界坐标
+    float3 wpos = ComputeWorldSpacePosition(uv,depth,UNITY_MATRIX_I_VP);
+    if (wpos.y < _ReflectPlaneHeight)
+    {
+        return;
+    }
+    
+    //计算反射后的世界坐标
+    float3 rwpos = wpos;//w2.x = w.x
+    rwpos.y = -rwpos.y + 2* _ReflectPlaneHeight;//w.y =  -y+2h
+
+    //计算反射后的UV
+    float4 rcpos = TransformWorldToHClip(rwpos);//世界坐标转 投射 非NDC
+    //这里是把相机内的空间坐标转换为正确的Y轴朝向
+    // *rcp(rcpos.w) 是 *（1/w） 相当于 （/w）   *0.5+0.5相当于把-1=>1(因为NDC下范围是-1=>1) 映射到0-1
+    float2 ruv = float2(rcpos.x,rcpos.y * _ProjectionParams.x)* rcp(rcpos.w)*0.5f+0.5f;
+    if (any(ruv)<0.0 || any(ruv)>1.0)//any() 作用是判断参数内任意一个分量是否满足条件
+    {
+        return;        
+    }
+//修复边缘UV被截断问题
+    // 像素距离水面越高越往屏幕两边拽
+     float HeightStrtch = (_ReflectPlaneHeight-rwpos.y);//因为要拽反射  所以从反射上获取的高度是负的 所以要用绝对值
+     float ScreenStretch = ((ruv.x *2-1)-_StretchParams.y);//将中心点转换到 0.5 0.5
+     // 如果水平角度看水面则没有像素拉伸的操作，角度越大越强
+     float3 CameraDirection = normalize(-_WorldSpaceCameraPos);//根据摄像机角度 做一个0-1的插值
+     float AngleStretch = (-CameraDirection.y);//这里是 相机水平的时候 Y等于0  相机垂直向下时  Y =-1   竖直向上时=1
+     // ruv.x *= 1+HeightStrtch * AngleStretch * ScreenStretch * _StretchParams.x;
+    ruv.x = ruv.x+ScreenStretch*HeightStrtch*AngleStretch*_StretchParams.x;
+//计算反射后的索引
+     float2 ridx = ruv * _SSPRReflectionSize.xy;//屏幕UV坐标*屏幕宽度和高度
+    
+//这里通过高度buffer 解决 闪烁问题
+    // 深度测试 写入更低的颜色
+
+    if (wpos.y > _SSPRHeightBuffer[ridx]) return;
+    // 写入深度和颜色
+    _SSPRHeightBuffer[ridx] = wpos.y;
+    half4 col = _CameraColorTexture.SampleLevel(sampler_CameraColorTexture,uv,0);
+    float smp = smoothstep(0,1,(_EdgeFadeOut-HeightStrtch)/HeightStrtch);
+    _SSPRReflectionTexture[ridx] = lerp(0,col,smp);
+    // _SSPRReflectionTexture[ridx] = HeightStrtch;
+}
+
+
+#pragma kernel FillHole
+
+
+[numthreads(16,16,1)]
+void FillHole(uint3 id : SV_DispatchThreadID) {
+    // fill holes inside each 2*2
+    id.xy *= 2;
+
+    // cache read
+    half4 center = _SSPRReflectionTexture[id.xy + uint2(0, 0)];
+    half4 right = _SSPRReflectionTexture[id.xy + uint2(0, 1)];
+    half4 bottom = _SSPRReflectionTexture[id.xy + uint2(1, 0)];
+    half4 bottomRight = _SSPRReflectionTexture[id.xy + uint2(1, 1)];
+
+    // find best inside 2*2
+    half4 best = center;
+    best = right.a > best.a + 0.5 ? right : best;
+    best = bottom.a > best.a + 0.5 ? bottom : best;
+    best = bottomRight.a > best.a + 0.5 ? bottomRight : best;
+
+    // write better rgba
+    _SSPRReflectionTexture[id.xy + uint2(0, 0)] = best.a > center.a + 0.5 ? best : center;
+    _SSPRReflectionTexture[id.xy + uint2(0, 1)] = best.a > right.a + 0.5 ? best : right;
+    _SSPRReflectionTexture[id.xy + uint2(1, 0)] = best.a > bottom.a + 0.5 ? best : bottom;
+    _SSPRReflectionTexture[id.xy + uint2(1, 1)] = best.a > bottomRight.a + 0.5 ? best : bottomRight;
+}
