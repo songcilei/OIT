@@ -31,6 +31,7 @@ namespace VexolShadowMap
             Nodes.Add(root);
             int startIndex = 0;
             int endIndex = Nodes.Count;
+            
             while (startIndex!=endIndex)
             {
                 for (int i = startIndex; i < endIndex; i++)
@@ -42,6 +43,12 @@ namespace VexolShadowMap
                 }
                 startIndex = endIndex;
                 endIndex = Nodes.Count;
+            }
+
+            //设置对应的index
+            for (int i = 0; i < Nodes.Count; i++)
+            {
+                Nodes[i].index = i;
             }
         }
     }
