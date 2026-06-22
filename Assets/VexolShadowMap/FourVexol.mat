@@ -95,7 +95,7 @@ Material:
     - _ClearCoatSmoothness: 0
     - _Cull: 2
     - _Cutoff: 0.5
-    - _Depth: 10
+    - _Depth: 12
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
@@ -115,7 +115,7 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
-    - _TreeTexWidth: 592
+    - _TreeTexWidth: 150
     - _TreeWidht: 10
     - _WorkflowMode: 1
     - _ZWrite: 1

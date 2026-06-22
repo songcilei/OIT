@@ -32,7 +32,8 @@ public class GenerateShadow : MonoBehaviour
         tree = new FourTree(_bound,maxDepth);
         fillTreeData();
         CombineNodes();
-       
+        tree.GetAllNotUniformNodeIndex();//这是非均匀收集版本！！因为要在切割完数据之后调用 所以额外在这里调用 正常来说应该在tree内部 进行
+        
         CreateTex();
     }
 

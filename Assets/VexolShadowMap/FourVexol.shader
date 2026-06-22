@@ -107,7 +107,7 @@ Shader "Unlit/FourVexol"
                 // }
                 // return 1;
                 
-                [unroll(20)]
+                [unroll(15)]
                 while (1)
                 {
                 
