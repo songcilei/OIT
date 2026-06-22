@@ -11,7 +11,6 @@ namespace VexolShadowMap
         public int maxDepth;
         public int maxChilCount;
         public List<Node> Nodes = new List<Node>();
-        
         private Vector2 min;
         private Vector2 max;
         public FourTree(Bounds bound,int maxDepth)

@@ -22,10 +22,9 @@ namespace VexolShadowMap
             this.parent = parent;
             this.depth = depth;
             this.bound = bound;
-            this.x = (int)(bound.center.x-bound.size.x/2)*10;//乘以10  是为了方便计算 以0.1米为 1个单位
-            this.z = (int)(bound.center.z-bound.size.z/2)*10;
+            this.x = (int)(bound.center.x)*10;//乘以10  是为了方便计算 以0.1米为 1个单位
+            this.z = (int)(bound.center.z)*10;
             this.flag = 0;
- 
             if (depth < maxDepth)
             {
                 CreateChild(depth,maxDepth,bound);
@@ -83,7 +82,7 @@ namespace VexolShadowMap
                 }
 
             }
-            Gizmos.DrawWireCube(bound.center,bound.size+new Vector3(0,height,0));
+            // Gizmos.DrawWireCube(bound.center,bound.size+new Vector3(0,height,0));
         }
     }
 

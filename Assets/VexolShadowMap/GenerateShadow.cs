@@ -32,10 +32,13 @@ public class GenerateShadow : MonoBehaviour
         tree = new FourTree(_bound,maxDepth);
         fillTreeData();
         CombineNodes();
-        Debug.Log(tree.Nodes.Count);
+       
         CreateTex();
     }
 
+    /// <summary>
+    /// 对最下层子集进行检测是否被阴影遮挡
+    /// </summary>
     public void fillTreeData()
     {
         foreach (var node in tree.Nodes)
@@ -47,6 +50,10 @@ public class GenerateShadow : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 进行检测是否被遮挡
+    /// </summary>
+    /// <param name="node"></param>
     private void ComputeRay(Node node)
     {
         Vector3 lightDir = -_light.transform.forward;
@@ -62,6 +69,9 @@ public class GenerateShadow : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 合并 四叉树节点
+    /// </summary>
     public void CombineNodes()
     {
         for (int i = maxDepth-1; i > 0; i--)
@@ -74,6 +84,10 @@ public class GenerateShadow : MonoBehaviour
                     {
                         treeNode.flag = 1;
                     }
+                    else
+                    {
+                        treeNode.flag = 0;
+                    }
                 }
             }
         }
@@ -83,25 +97,28 @@ public class GenerateShadow : MonoBehaviour
     
     public void CreateTex()
     {
-
+        Debug.Log(tree.Nodes.Count);
         int texSize =  Mathf.CeilToInt(Mathf.Sqrt(tree.Nodes.Count));
-        Debug.Log("texSize:"+texSize);
+        Debug.Log(texSize);
         Texture2D tex = new Texture2D(texSize, texSize, TextureFormat.RGBAFloat, false, true);
         tex.filterMode = FilterMode.Point;
         Color[] colors = new Color[texSize*texSize];
         for (int i = 0; i < tree.Nodes.Count; i++)
         {
-            colors[i].r = tree.Nodes[i].x/255.0f;
-            colors[i].g = tree.Nodes[i].z/255.0f;
-            Debug.Log(tree.Nodes[i].children != null ? tree.Nodes[i].children[0].index:-1);
-            colors[i].b = tree.Nodes[i].children != null ? tree.Nodes[i].children[0].index/255.0f : -1;
+            colors[i].r = tree.Nodes[i].x;
+            colors[i].g = tree.Nodes[i].z;
+            colors[i].b = tree.Nodes[i].children != null ? tree.Nodes[i].children[0].index : -1;
+            
             colors[i].a = tree.Nodes[i].flag;
+            // Debug.Log(tree.Nodes[i].children != null ? tree.Nodes[i].children[0].index/255.0f : -1);
+            // Debug.Log(colors[i].r +"::"+colors[i].g+"::"+colors[i].b + ":::"+colors[i].a+"::::"+i);
+            
         }
         tex.SetPixels(colors);
         tex.Apply();
         mat.SetTexture("_VexolTex",tex);
-        mat.SetInt("_TreeWidht",(int)texSize);
-        mat.SetInt("_BoundWidht",(int)_bound.size.x);
+        mat.SetInt("_TreeTexWidth",(int)texSize);
+        mat.SetInt("_Depth",maxDepth);
         mat.SetTexture("_MainTex",tex);
         
         

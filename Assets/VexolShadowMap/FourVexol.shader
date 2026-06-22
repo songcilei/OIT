@@ -4,8 +4,8 @@ Shader "Unlit/FourVexol"
     {
         _MainTex ("Texture", 2D) = "white" {}
         _VexolTex("VexolTex",2D) = "white"{}
-        _BoundWidht ("BoundWidht",int) = 1024
-        _TreeTexWidth("TreeTexWidth", int) = 1024
+        _Depth("Depth",float) = 1024
+        _TreeTexWidth("TreeTexWidth", float) = 1024
     }
     SubShader
     {
@@ -19,7 +19,7 @@ Shader "Unlit/FourVexol"
             #pragma fragment frag
             // make fog work
             #pragma multi_compile_fog
-
+            #pragma target 5.0
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"  
 
             struct appdata
@@ -37,9 +37,13 @@ Shader "Unlit/FourVexol"
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
-            sampler2D _VexolTex;
+            TEXTURE2D( _VexolTex);
+            SAMPLER(sampler_VexolTex);
+            // SamplerState sm_point_clamp_VexolTex;
+            
             float4 _VexolTex_ST;
-            int _BoundWidht,_TreeTexWidth;
+            float _Depth;
+            float _TreeTexWidth;
             
             v2f vert (appdata v)
             {
@@ -53,59 +57,102 @@ Shader "Unlit/FourVexol"
 
             float4 GetTreeValue(int index)
             {
-                return	tex2D(_VexolTex, half2(index % _TreeTexWidth, index / _TreeTexWidth)/ (half)max(_TreeTexWidth, 1));
-                            
+                float u = index % _TreeTexWidth + 0.5f/_TreeTexWidth;//这里需要计算像素中心点 因为需要中心点采样
+                float v = index / _TreeTexWidth + 0.5f/_TreeTexWidth;//这里需要计算像素中心点 因为需要中心点采样
+                return SAMPLE_TEXTURE2D(_VexolTex, sampler_VexolTex, float4(u,v,0,0)/_TreeTexWidth);
+                // return _VexolTex.Sample(sm_point_clamp_VexolTex, float4(u,v,0,0)/_TreeTexWidth);
             }
-            half ShadowValue(float3 wPos)
+            float ShadowValue(float3 wPos)
             {
-                int x = wPos.x*10+0.5;
-                // int y = i.worldPos.y+0.5;
-                int z = wPos.z*10+0.5;
+                float x = (wPos.x)*10;
+                float z = (wPos.z)*10;
                 
-                int index = 0;
-                int size = _BoundWidht;
-    
-                [unroll(10)]
-                while (1)
+                int index = 0;//这里之所以从0开始 是因为树节点的索引是从0开始的
+                float size = _Depth;
+                
+                [loop] // 告诉编译器：不要展开，原生循环执行
+                for (int i=0; i<10; i++)
                 {
-                
-                    int4 node = GetTreeValue(index);
-         
+                    float4 node = GetTreeValue(index);
+
                     int flag = node.a;
 
-                    if (node.z*255<0) 
+                    if (node.z<=0) //说明没有子节点
                     {
                         return 1-flag;
                     }
-                    if (size ==1)
+
+                    if (flag == 1) //说明已经是阴影节点
+                    {
+                        return 0;
+                    }
+                    if (size==0)//说明已经循环到了最大深度
                     {
                         return 1;
                     }
-                    int childIndex = 0;
-                    if (x > node.x*255 + size/2)
+                    float childIndex = 0;
+                    if (x > node.x)
                     {
                         childIndex+=2;
                     }
-                    if (z>node.y*255 +size/2)
+                    if (z>node.y)
                     {
                         childIndex ++;
                     }
                     
-                    index = node.z*255 + childIndex;
-                    size/=2;
+                    index = node.z + childIndex;
+                    size-=1;
                 }
                 return 1;
+                
+                // [unroll(20)]
+                // while (1)
+                // {
+                //
+                //     float4 node = GetTreeValue(index);
+                //
+                //     int flag = node.a;
+                //
+                //     // if (node.z==-1) //说明没有子节点
+                //     // {
+                //     //     return 1-flag;
+                //     // }
+                //     if (flag == 1) //说明已经是阴影节点
+                //     {
+                //         return 0;
+                //     }
+                //     if (size==1)//说明已经循环到了最大深度
+                //     {
+                //         return 1;
+                //     }
+                //     float childIndex = 0;
+                //     if (x > node.x)
+                //     {
+                //         childIndex+=2;
+                //     }
+                //     if (z>node.y)
+                //     {
+                //         childIndex ++;
+                //     }
+                //     
+                //     index = node.z + childIndex;
+                //     size/=2;
+                // }
+                // return 1;
             }
             
             float4 frag (v2f i) : SV_Target
             {
                 // sample the texture
-                float4 col = tex2D(_MainTex, i.uv);
+                float4 col = tex2D(_MainTex,1- i.uv);
                 
-                
+                // return float4(frac(i.worldPos),1);
                 float atten = ShadowValue(i.worldPos);
                 
-       
+                // float4 aa = _VexolTex.Sample(sm_point_clamp_VexolTex, half4(1-i.uv,0,0));
+                
+                // return aa.aaaa;
+                // return aa.bbbb==5;
                 
                 
                 return atten;
