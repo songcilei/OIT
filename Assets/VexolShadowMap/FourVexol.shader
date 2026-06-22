@@ -57,9 +57,11 @@ Shader "Unlit/FourVexol"
 
             float4 GetTreeValue(int index)
             {
-                float u = index % _TreeTexWidth + 0.5f/_TreeTexWidth;//这里需要计算像素中心点 因为需要中心点采样
-                float v = index / _TreeTexWidth + 0.5f/_TreeTexWidth;//这里需要计算像素中心点 因为需要中心点采样
-                return SAMPLE_TEXTURE2D(_VexolTex, sampler_VexolTex, float4(u,v,0,0)/_TreeTexWidth);
+                int texWidth = (int)_TreeTexWidth;
+                int col = index % texWidth;
+                int row = index / texWidth;
+                float2 uv = (float2(col, row) + 0.5f) / _TreeTexWidth;//这里需要计算像素中心点 因为需要中心点采样
+                return SAMPLE_TEXTURE2D(_VexolTex, sampler_VexolTex, uv);
                 // return _VexolTex.Sample(sm_point_clamp_VexolTex, float4(u,v,0,0)/_TreeTexWidth);
             }
             float ShadowValue(float3 wPos)
@@ -70,9 +72,45 @@ Shader "Unlit/FourVexol"
                 int index = 0;//这里之所以从0开始 是因为树节点的索引是从0开始的
                 float size = _Depth;
                 
-                [loop] // 告诉编译器：不要展开，原生循环执行
-                for (int i=0; i<10; i++)
+                // [loop] // 告诉编译器：不要展开，原生循环执行
+                // for (int i=0; i<10; i++)
+                // {
+                //     float4 node = GetTreeValue(index);
+                //
+                //     int flag = node.a;
+                //
+                //     if (node.z<=0) //说明没有子节点
+                //     {
+                //         return 1-flag;
+                //     }
+                //
+                //     if (flag == 1) //说明已经是阴影节点
+                //     {
+                //         return 0;
+                //     }
+                //     if (size==0)//说明已经循环到了最大深度
+                //     {
+                //         return 1;
+                //     }
+                //     int childIndex = 0;
+                //     if (x > node.x)
+                //     {
+                //         childIndex+=2;
+                //     }
+                //     if (z>node.y)
+                //     {
+                //         childIndex ++;
+                //     }
+                //     
+                //     index = (int)round(node.z) + childIndex;
+                //     size-=1;
+                // }
+                // return 1;
+                
+                [unroll(20)]
+                while (1)
                 {
+                
                     float4 node = GetTreeValue(index);
 
                     int flag = node.a;
@@ -90,7 +128,7 @@ Shader "Unlit/FourVexol"
                     {
                         return 1;
                     }
-                    float childIndex = 0;
+                    int childIndex = 0;
                     if (x > node.x)
                     {
                         childIndex+=2;
@@ -100,45 +138,10 @@ Shader "Unlit/FourVexol"
                         childIndex ++;
                     }
                     
-                    index = node.z + childIndex;
+                    index = (int)round(node.z) + childIndex;
                     size-=1;
                 }
                 return 1;
-                
-                // [unroll(20)]
-                // while (1)
-                // {
-                //
-                //     float4 node = GetTreeValue(index);
-                //
-                //     int flag = node.a;
-                //
-                //     // if (node.z==-1) //说明没有子节点
-                //     // {
-                //     //     return 1-flag;
-                //     // }
-                //     if (flag == 1) //说明已经是阴影节点
-                //     {
-                //         return 0;
-                //     }
-                //     if (size==1)//说明已经循环到了最大深度
-                //     {
-                //         return 1;
-                //     }
-                //     float childIndex = 0;
-                //     if (x > node.x)
-                //     {
-                //         childIndex+=2;
-                //     }
-                //     if (z>node.y)
-                //     {
-                //         childIndex ++;
-                //     }
-                //     
-                //     index = node.z + childIndex;
-                //     size/=2;
-                // }
-                // return 1;
             }
             
             float4 frag (v2f i) : SV_Target

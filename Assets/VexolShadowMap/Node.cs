@@ -7,8 +7,8 @@ namespace VexolShadowMap
     public class Node
     {
         public int level;
-        public int x;
-        public int z;
+        public float x;
+        public float z;
         public int size;
         public int flag;
         public Node parent;
@@ -22,8 +22,11 @@ namespace VexolShadowMap
             this.parent = parent;
             this.depth = depth;
             this.bound = bound;
-            this.x = (int)(bound.center.x)*10;//乘以10  是为了方便计算 以0.1米为 1个单位
-            this.z = (int)(bound.center.z)*10;
+            //注意这里有个大坑  *10需要放到括号内  因为center.x 可能是小数 如果直接截断 会丢失精度
+            //查了一下午 
+            this.x = (bound.center.x*10);//乘以10  是为了方便计算 以0.1米为 1个单位
+            this.z = (bound.center.z*10);
+
             this.flag = 0;
             if (depth < maxDepth)
             {

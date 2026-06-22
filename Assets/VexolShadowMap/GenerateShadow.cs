@@ -102,6 +102,7 @@ public class GenerateShadow : MonoBehaviour
         Debug.Log(texSize);
         Texture2D tex = new Texture2D(texSize, texSize, TextureFormat.RGBAFloat, false, true);
         tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
         Color[] colors = new Color[texSize*texSize];
         for (int i = 0; i < tree.Nodes.Count; i++)
         {
