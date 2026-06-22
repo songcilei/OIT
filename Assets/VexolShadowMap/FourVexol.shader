@@ -113,32 +113,37 @@ Shader "Unlit/FourVexol"
                 
                     float4 node = GetTreeValue(index);
 
-                    int flag = node.a;
+                    float flag = node.a;
 
-                    if (node.z<=0) //说明没有子节点
-                    {
-                        return 1-flag;
-                    }
-
+                    // if (node.z*255<=0) //说明没有子节点
+                    // {
+                    //     return 1-flag;
+                    // }
                     if (flag == 1) //说明已经是阴影节点
                     {
                         return 0;
                     }
+                    
+                    if (flag == 0) //这个是从-1 映射过来的 因为要保存图片
+                    {
+                        return 1;//表明子孙皆未被遮挡
+                    }
+
                     if (size==0)//说明已经循环到了最大深度
                     {
                         return 1;
                     }
                     int childIndex = 0;
-                    if (x > node.x)
+                    if (x > node.x*255)
                     {
                         childIndex+=2;
                     }
-                    if (z>node.y)
+                    if (z>node.y*255)
                     {
                         childIndex ++;
                     }
                     
-                    index = (int)round(node.z) + childIndex;
+                    index = (int)round(node.z*255) + childIndex;
                     size-=1;
                 }
                 return 1;
@@ -151,14 +156,14 @@ Shader "Unlit/FourVexol"
                 
                 // return float4(frac(i.worldPos),1);
                 float atten = ShadowValue(i.worldPos);
-                
+                atten= saturate(atten);
                 // float4 aa = _VexolTex.Sample(sm_point_clamp_VexolTex, half4(1-i.uv,0,0));
                 
                 // return aa.aaaa;
                 // return aa.bbbb==5;
                 
                 
-                return atten;
+                return atten*float4(0.5f,0.5f,0.5f,1);
                 // return float4(atten,atten,atten,1);
             }
             ENDHLSL

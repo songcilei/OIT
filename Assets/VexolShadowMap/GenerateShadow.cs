@@ -65,7 +65,7 @@ public class GenerateShadow : MonoBehaviour
         }
         else
         {
-            node.flag = 0;
+            node.flag = -1;//这里给-1 是用来假定标记 第一次检测结果为未被遮挡切子孙也未被遮挡   后续会改变标记
         }
     }
 
@@ -80,13 +80,16 @@ public class GenerateShadow : MonoBehaviour
             {
                 if (treeNode.depth == i)
                 {
-                    if (treeNode.GetChildFlag())
+                    if (treeNode.GetChildShadowFlag())//这里检测 节点的子节点是否被遮挡
                     {
-                        treeNode.flag = 1;
+                        treeNode.flag = 1;//被遮挡
+                    }else if (treeNode.GetChildNotShadowFlag())//这里检测 节点的子节点是否被遮挡
+                    {
+                        treeNode.flag = -1;//子孙皆未被遮挡
                     }
-                    else
+                    else//子孙有被遮挡的
                     {
-                        treeNode.flag = 0;
+                        treeNode.flag = 0;//中间态 子孙存在被遮挡
                     }
                 }
             }
@@ -106,14 +109,12 @@ public class GenerateShadow : MonoBehaviour
         Color[] colors = new Color[texSize*texSize];
         for (int i = 0; i < tree.Nodes.Count; i++)
         {
-            colors[i].r = tree.Nodes[i].x;
-            colors[i].g = tree.Nodes[i].z;
-            colors[i].b = tree.Nodes[i].children != null ? tree.Nodes[i].children[0].index : -1;
+            colors[i].r = tree.Nodes[i].x/255.0f;
+            colors[i].g = tree.Nodes[i].z/255.0f;
+            colors[i].b = tree.Nodes[i].children != null ? tree.Nodes[i].children[0].index/255.0f : -1;
             
-            colors[i].a = tree.Nodes[i].flag;
-            // Debug.Log(tree.Nodes[i].children != null ? tree.Nodes[i].children[0].index/255.0f : -1);
-            // Debug.Log(colors[i].r +"::"+colors[i].g+"::"+colors[i].b + ":::"+colors[i].a+"::::"+i);
-            
+            colors[i].a = tree.Nodes[i].flag*0.5f+0.5f; // 从-1 映射到 0 
+
         }
         tex.SetPixels(colors);
         tex.Apply();
@@ -134,7 +135,7 @@ public class GenerateShadow : MonoBehaviour
 
         if (debugMode)
         {
-            tree.root.GizmosBound(0.1f,-_light.transform.forward);
+            tree.root.GizmosBound(0,-_light.transform.forward);
             Gizmos.color = Color.green;
             Gizmos.DrawWireCube(_bound.center,_bound.size+new Vector3(0,0.1f,0));
 

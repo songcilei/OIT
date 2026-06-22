@@ -10,7 +10,7 @@ namespace VexolShadowMap
         public float x;
         public float z;
         public int size;
-        public int flag;
+        public int flag;//1 = 被遮挡  0 = 未遮挡 -1 = 未遮挡且子节点也未遮挡
         public Node parent;
         public Node[] children;
         public int index;
@@ -47,9 +47,18 @@ namespace VexolShadowMap
             }
         }
 
-        public bool GetChildFlag()
+        public bool GetChildShadowFlag()
         {
             if (children[0].flag ==1 && children[1].flag ==1 && children[2].flag ==1 && children[3].flag ==1)
+            {
+                return true;
+            }
+
+            return false;
+        }
+        public bool GetChildNotShadowFlag()
+        {
+            if (children[0].flag ==-1 && children[1].flag ==-1 && children[2].flag ==-1 && children[3].flag ==-1)
             {
                 return true;
             }
@@ -72,6 +81,11 @@ namespace VexolShadowMap
                 // Gizmos.DrawLine(bound.center, bound.center+ lightDir*100);
                 Gizmos.DrawWireCube(bound.center,bound.size+new Vector3(0,height,0));
                 
+            }
+            else if (flag == -1)
+            {
+                Gizmos.color = Color.white;
+                Gizmos.DrawWireCube(bound.center,bound.size+new Vector3(0,height,0));
             }
             else
             {
