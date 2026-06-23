@@ -59,6 +59,7 @@ public class GenerateShadow : MonoBehaviour
     {
         Vector3 lightDir = -_light.transform.forward;
         RaycastHit hit;
+
         if (Physics.Raycast(node.bound.center, lightDir, out hit, 1000))
         {
             // Debug.DrawRay(node.bound.center, lightDir, Color.red);
@@ -122,7 +123,7 @@ public class GenerateShadow : MonoBehaviour
         mat.SetTexture("_VexolTex",tex);
         mat.SetInt("_TreeTexWidth",(int)texSize);
         mat.SetInt("_Depth",maxDepth);
-        mat.SetTexture("_MainTex",tex);
+        // mat.SetTexture("_MainTex",tex);
         
         
     }

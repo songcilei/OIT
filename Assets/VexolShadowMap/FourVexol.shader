@@ -2,6 +2,8 @@ Shader "Unlit/FourVexol"
 {
     Properties
     {
+        _Ambient("Ambient",Color)=(0.5,0.5,0.5,1)
+        
         _MainTex ("Texture", 2D) = "white" {}
         _VexolTex("VexolTex",2D) = "white"{}
         _Depth("Depth",float) = 1024
@@ -44,6 +46,7 @@ Shader "Unlit/FourVexol"
             float4 _VexolTex_ST;
             float _Depth;
             float _TreeTexWidth;
+            float4 _Ambient;
             
             v2f vert (appdata v)
             {
@@ -153,7 +156,6 @@ Shader "Unlit/FourVexol"
             {
                 // sample the texture
                 float4 col = tex2D(_MainTex,1- i.uv);
-                
                 // return float4(frac(i.worldPos),1);
                 float atten = ShadowValue(i.worldPos);
                 atten= saturate(atten);
@@ -162,8 +164,11 @@ Shader "Unlit/FourVexol"
                 // return aa.aaaa;
                 // return aa.bbbb==5;
                 
-                
-                return atten*float4(0.5f,0.5f,0.5f,1);
+                float4 finalColor = 1;
+                finalColor.rgb = col.rgb*atten
+                                +_Ambient * col
+                ;
+                return finalColor;
                 // return float4(atten,atten,atten,1);
             }
             ENDHLSL
