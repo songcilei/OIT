@@ -1,0 +1,116 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace VexolShadowMap
+{
+    public class OcNode
+    {
+        public int level;
+        public float x;
+        public float y;
+        public float z;
+        public int size;
+        public int flag;//1 = 被遮挡  0 = 未遮挡 -1 = 未遮挡且子节点也未遮挡
+        public OcNode parent;
+        public OcNode[] children;
+        public int index;
+        public int depth;
+        public Bounds bound;
+
+        public OcNode(OcNode parent,int depth,int maxDepth,Bounds bound)
+        {
+            this.parent = parent;
+            this.depth = depth;
+            this.bound = bound;
+            //注意这里有个大坑  *10需要放到括号内  因为center.x 可能是小数 如果直接截断 会丢失精度
+            //查了一下午 
+            this.x = (bound.center.x*10);//乘以10  是为了方便计算 以0.1米为 1个单位
+            this.y = (bound.center.y*10);
+            this.z = (bound.center.z*10);
+
+            this.flag = 0;
+            if (depth < maxDepth)
+            {
+                CreateChild(depth,maxDepth,bound);
+            }
+        }
+
+        private void CreateChild(int depth,int maxDepth,Bounds bounds) {
+            children = new OcNode[8];
+            int index = 0;
+            for (int s = -1;s<=1; s+=2){//Y
+                for (int i=-1;i<=1;i+=2) {//X
+                    for (int j =-1;j<=1;j+=2) {//Z
+                        Vector3 centerOffset = new Vector3(bounds.size.x/4*i,bounds.size.y/4*s,bounds.size.z/4*j);
+                        Vector3 cSize = new Vector3(bounds.size.x/2,bounds.size.y/2,bounds.size.z/2);
+                        Bounds cBound = new Bounds(bounds.center+centerOffset,cSize);
+                        children[index++] = new OcNode(this, depth + 1,maxDepth,cBound);
+                    }
+                }
+            }
+
+        }
+
+        public bool GetChildShadowFlag()
+        {
+            if (children[0].flag ==1 && children[1].flag ==1 && children[2].flag ==1 && children[3].flag ==1
+                &&children[4].flag ==1 &&children[5].flag ==1 &&children[6].flag ==1 &&children[7].flag ==1)
+            {
+                return true;
+            }
+
+            return false;
+        }
+        public bool GetChildNotShadowFlag()
+        {
+            if (children[0].flag ==-1 && children[1].flag ==-1 && children[2].flag ==-1 && children[3].flag ==-1
+                &&children[4].flag ==-1 &&children[5].flag ==-1 &&children[6].flag ==-1 &&children[7].flag ==-1)
+            {
+                return true;
+            }
+
+            return false;
+        }
+        
+        public void insterNode()
+        {
+            
+        }
+
+
+        
+        public void GizmosBound(float height,Vector3 lightDir,bool DebugDrawWhite)
+        {
+            if (flag==1)
+            {
+                Gizmos.color = Color.red;
+                // Gizmos.DrawLine(bound.center, bound.center+ lightDir*100);
+                Gizmos.DrawWireCube(bound.center,bound.size);
+                
+            }
+            else if (flag == -1)
+            {
+                if (DebugDrawWhite)
+                {
+                    Gizmos.color = Color.white;
+                    Gizmos.DrawWireCube(bound.center,bound.size);
+                }
+            }
+            else
+            {
+                Gizmos.color = Color.white;
+                if (children!=null)
+                {
+                    foreach (var child in children)
+                    {
+                        child.GizmosBound(height,lightDir,DebugDrawWhite);
+                    }
+                }
+
+            }
+            // Gizmos.DrawWireCube(bound.center,bound.size+new Vector3(0,height,0));
+        }
+    }
+
+}
