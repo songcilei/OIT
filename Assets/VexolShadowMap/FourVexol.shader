@@ -143,7 +143,7 @@ Shader "Unlit/FourVexol"
                         childIndex ++;
                     }
                     
-                    index = (int)round(node.z*255) + childIndex;
+                    index = (node.z*255) + childIndex;
                     size-=1;
                 }
                 return 1;

@@ -2642,7 +2642,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2bb17e41369ecc44480c7fca6277bc36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxDepth: 12
+  maxDepth: 11
   _light: {fileID: 203844588}
   mat: {fileID: 2100000, guid: 508e510bae5c37c4bb29b99974f4768d, type: 2}
   debugMode: 1
