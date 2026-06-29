@@ -63,6 +63,7 @@ namespace CameraReverseTool.Editor
         private InitialGuessMode initialGuessMode = InitialGuessMode.SelectedCamera;
         private float planeWidth = 1f;
         private float planeHeight = 1f;
+        private int planeGuideLineCount = 2;
         private float cubeWidth = 1f;
         private float cubeHeight = 1f;
         private float cubeDepth = 1f;
@@ -119,6 +120,7 @@ namespace CameraReverseTool.Editor
             {
                 planeWidth = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Plane Width", planeWidth));
                 planeHeight = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Plane Height", planeHeight));
+                planeGuideLineCount = EditorGUILayout.IntSlider("Guide Lines", planeGuideLineCount, 0, 20);
                 EditorGUILayout.HelpBox("Point order: 0 bottom-left, 1 bottom-right, 2 top-right, 3 top-left.", MessageType.Info);
             }
             else
@@ -188,6 +190,7 @@ namespace CameraReverseTool.Editor
 
             Handles.BeginGUI();
             DrawPointLines(viewportRect, imageRect, imagePoints, new Color(1f, 0.9f, 0f, 0.9f));
+            DrawPlaneGuideLines(viewportRect, imageRect);
             if (projectedPoints != null)
             {
                 DrawPointLines(viewportRect, imageRect, projectedPoints, new Color(0f, 0.85f, 1f, 0.75f));
@@ -243,6 +246,43 @@ namespace CameraReverseTool.Editor
 
                 Handles.DrawAAPolyLine(3f, start, end);
             }
+        }
+
+        private void DrawPlaneGuideLines(Rect viewportRect, Rect imageRect)
+        {
+            if (solveMode != SolveMode.Plane4Points || imagePoints == null || imagePoints.Length != 4 || planeGuideLineCount <= 0)
+            {
+                return;
+            }
+
+            Vector2 bottomLeft = NormalizedToScreen(imageRect, imagePoints[0]);
+            Vector2 bottomRight = NormalizedToScreen(imageRect, imagePoints[1]);
+            Vector2 topRight = NormalizedToScreen(imageRect, imagePoints[2]);
+            Vector2 topLeft = NormalizedToScreen(imageRect, imagePoints[3]);
+
+            Handles.color = new Color(0.25f, 1f, 0.35f, 0.65f);
+            for (int i = 1; i <= planeGuideLineCount; i++)
+            {
+                float t = (float)i / (planeGuideLineCount + 1);
+                DrawGuideLineIfVisible(
+                    viewportRect,
+                    Vector2.Lerp(bottomLeft, bottomRight, t),
+                    Vector2.Lerp(topLeft, topRight, t));
+                DrawGuideLineIfVisible(
+                    viewportRect,
+                    Vector2.Lerp(bottomLeft, topLeft, t),
+                    Vector2.Lerp(bottomRight, topRight, t));
+            }
+        }
+
+        private void DrawGuideLineIfVisible(Rect viewportRect, Vector2 start, Vector2 end)
+        {
+            if (!viewportRect.Contains(start) && !viewportRect.Contains(end))
+            {
+                return;
+            }
+
+            Handles.DrawAAPolyLine(2f, start, end);
         }
 
         private Rect CalculateImageRect(Rect viewportRect)
