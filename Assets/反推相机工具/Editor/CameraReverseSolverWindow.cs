@@ -207,7 +207,7 @@ namespace CameraReverseTool.Editor
                     continue;
                 }
 
-                Handles.color = Color.yellow;
+                Handles.color = GetPickedPointColor(i);
                 Handles.DrawSolidDisc(screen, Vector3.forward, HandleRadius);
                 Handles.color = Color.black;
                 Handles.DrawWireDisc(screen, Vector3.forward, HandleRadius);
@@ -249,6 +249,26 @@ namespace CameraReverseTool.Editor
 
                 Handles.DrawAAPolyLine(3f, start, end);
             }
+        }
+
+        private Color GetPickedPointColor(int index)
+        {
+            if (solveMode != SolveMode.TwoPlanes8Points)
+            {
+                return Color.yellow;
+            }
+
+            if (index == 0 || index == 4)
+            {
+                return new Color(1f, 0.45f, 0.1f);
+            }
+
+            if (index == 3 || index == 7)
+            {
+                return new Color(1f, 0.1f, 0.85f);
+            }
+
+            return Color.yellow;
         }
 
         private Rect CalculateImageRect(Rect viewportRect)
