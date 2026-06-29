@@ -94,21 +94,21 @@ namespace CameraReverseTool.Editor
 
     internal static class CameraReverseSolver
     {
-        public static CameraReverseSolveResult Solve(Vector3[] worldPoints, Vector2[] imagePoints, CameraReverseParameters initial, float aspect)
+        public static CameraReverseSolveResult Solve(Vector3[] worldPoints, Vector2[] imagePoints, CameraReverseParameters initial, float aspect, bool solveFov = true)
         {
             if (worldPoints == null || imagePoints == null || worldPoints.Length != imagePoints.Length || worldPoints.Length < 4)
             {
                 return new CameraReverseSolveResult(initial, float.PositiveInfinity, float.PositiveInfinity, false);
             }
 
-            CameraReverseParameters[] seeds = CreateSeedParameters(worldPoints, initial);
+            CameraReverseParameters[] seeds = CreateSeedParameters(worldPoints, initial, solveFov);
             CameraReverseParameters best = initial;
             float bestError = float.PositiveInfinity;
             float bestMax = float.PositiveInfinity;
 
             for (int i = 0; i < seeds.Length; i++)
             {
-                CameraReverseSolveResult result = OptimizeFromSeed(worldPoints, imagePoints, seeds[i], aspect);
+                CameraReverseSolveResult result = OptimizeFromSeed(worldPoints, imagePoints, seeds[i], aspect, solveFov);
                 if (result.AverageNormalizedError < bestError)
                 {
                     best = result.Parameters;
@@ -120,7 +120,7 @@ namespace CameraReverseTool.Editor
             return new CameraReverseSolveResult(best, bestError, bestMax, float.IsFinite(bestError));
         }
 
-        private static CameraReverseSolveResult OptimizeFromSeed(Vector3[] worldPoints, Vector2[] imagePoints, CameraReverseParameters initial, float aspect)
+        private static CameraReverseSolveResult OptimizeFromSeed(Vector3[] worldPoints, Vector2[] imagePoints, CameraReverseParameters initial, float aspect, bool solveFov)
         {
             CameraReverseParameters best = initial;
             float bestError = ComputeAverageError(worldPoints, imagePoints, best, aspect, out float bestMax);
@@ -149,7 +149,10 @@ namespace CameraReverseTool.Editor
                     bool improved = false;
                     improved |= ImprovePosition(worldPoints, imagePoints, aspect, ref best, ref bestError, ref bestMax, positionStep);
                     improved |= ImproveRotation(worldPoints, imagePoints, aspect, ref best, ref bestError, ref bestMax, rotationStep);
-                    improved |= ImproveFov(worldPoints, imagePoints, aspect, ref best, ref bestError, ref bestMax, fovStep);
+                    if (solveFov)
+                    {
+                        improved |= ImproveFov(worldPoints, imagePoints, aspect, ref best, ref bestError, ref bestMax, fovStep);
+                    }
                     if (!improved)
                     {
                         break;
@@ -160,7 +163,7 @@ namespace CameraReverseTool.Editor
             return new CameraReverseSolveResult(best, bestError, bestMax, float.IsFinite(bestError));
         }
 
-        private static CameraReverseParameters[] CreateSeedParameters(Vector3[] worldPoints, CameraReverseParameters initial)
+        private static CameraReverseParameters[] CreateSeedParameters(Vector3[] worldPoints, CameraReverseParameters initial, bool solveFov)
         {
             float radius = EstimateRadius(worldPoints, out Vector3 center);
             float distance = Mathf.Max(2f, radius * 4f);
@@ -175,7 +178,7 @@ namespace CameraReverseTool.Editor
                 new Vector3(-1f, 0f, 1f).normalized,
                 new Vector3(1f, 0f, 1f).normalized
             };
-            float[] fovs = { initial.VerticalFov, 35f, 60f, 85f };
+            float[] fovs = solveFov ? new[] { initial.VerticalFov, 35f, 60f, 85f } : new[] { initial.VerticalFov };
             var seeds = new CameraReverseParameters[1 + directions.Length * fovs.Length];
             seeds[0] = initial;
             int index = 1;

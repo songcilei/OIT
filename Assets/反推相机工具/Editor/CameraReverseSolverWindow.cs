@@ -64,6 +64,8 @@ namespace CameraReverseTool.Editor
         private float planeWidth = 1f;
         private float planeHeight = 1f;
         private int planeGuideLineCount = 2;
+        private bool lockPlaneFov = true;
+        private float manualPlaneFov = 60f;
         private float cubeWidth = 1f;
         private float cubeHeight = 1f;
         private float cubeDepth = 1f;
@@ -121,6 +123,25 @@ namespace CameraReverseTool.Editor
                 planeWidth = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Plane Width", planeWidth));
                 planeHeight = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Plane Height", planeHeight));
                 planeGuideLineCount = EditorGUILayout.IntSlider("Guide Lines", planeGuideLineCount, 0, 20);
+                lockPlaneFov = EditorGUILayout.Toggle("Lock FOV", lockPlaneFov);
+                using (new EditorGUI.DisabledScope(!lockPlaneFov))
+                {
+                    manualPlaneFov = EditorGUILayout.Slider("Manual FOV", manualPlaneFov, 10f, 120f);
+                    if (GUILayout.Button("Use Selected Camera FOV"))
+                    {
+                        Camera selectedCamera = GetSelectedCamera();
+                        if (selectedCamera != null)
+                        {
+                            manualPlaneFov = selectedCamera.fieldOfView;
+                            SetStatus("Manual FOV copied from selected camera.", MessageType.Info);
+                        }
+                        else
+                        {
+                            SetStatus("Select a Camera or a GameObject with a Camera component first.", MessageType.Warning);
+                        }
+                    }
+                }
+
                 EditorGUILayout.HelpBox("Point order: 0 bottom-left, 1 bottom-right, 2 top-right, 3 top-left.", MessageType.Info);
             }
             else
@@ -457,7 +478,13 @@ namespace CameraReverseTool.Editor
 
             float aspect = (float)referenceTexture.width / Mathf.Max(1, referenceTexture.height);
             CameraReverseParameters initial = CreateInitialGuess(worldPoints);
-            lastResult = CameraReverseSolver.Solve(worldPoints, imagePoints, initial, aspect);
+            bool solveFov = solveMode != SolveMode.Plane4Points || !lockPlaneFov;
+            if (!solveFov)
+            {
+                initial = new CameraReverseParameters(initial.Position, initial.Rotation, manualPlaneFov);
+            }
+
+            lastResult = CameraReverseSolver.Solve(worldPoints, imagePoints, initial, aspect, solveFov);
             hasResult = lastResult.Success;
             projectedPoints = BuildProjectedPoints(worldPoints, lastResult.Parameters, aspect);
 
