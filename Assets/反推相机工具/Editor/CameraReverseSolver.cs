@@ -2,6 +2,12 @@ using UnityEngine;
 
 namespace CameraReverseTool.Editor
 {
+    internal enum TwoPlaneSharedEdgeMode
+    {
+        Vertical,
+        Horizontal
+    }
+
     internal readonly struct CameraReverseParameters
     {
         public CameraReverseParameters(Vector3 position, Quaternion rotation, float verticalFov)
@@ -18,13 +24,29 @@ namespace CameraReverseTool.Editor
 
     internal static class CameraReverseGeometry
     {
-        public static Vector3[] CreateTwoPlanePoints(float firstPlaneWidth, float sharedHeight, float secondPlaneDepth)
+        public static Vector3[] CreateTwoPlanePoints(float firstPlaneWidth, float sharedHeight, float secondPlaneDepth, TwoPlaneSharedEdgeMode sharedEdgeMode)
         {
             firstPlaneWidth = Mathf.Max(0.0001f, firstPlaneWidth);
             sharedHeight = Mathf.Max(0.0001f, sharedHeight);
             secondPlaneDepth = Mathf.Max(0.0001f, secondPlaneDepth);
-            float y = sharedHeight * 0.5f;
 
+            if (sharedEdgeMode == TwoPlaneSharedEdgeMode.Horizontal)
+            {
+                float x = firstPlaneWidth * 0.5f;
+                return new[]
+                {
+                    new Vector3(-x, 0f, 0f),
+                    new Vector3(x, 0f, 0f),
+                    new Vector3(x, sharedHeight, 0f),
+                    new Vector3(-x, sharedHeight, 0f),
+                    new Vector3(-x, 0f, 0f),
+                    new Vector3(x, 0f, 0f),
+                    new Vector3(x, 0f, secondPlaneDepth),
+                    new Vector3(-x, 0f, secondPlaneDepth)
+                };
+            }
+
+            float y = sharedHeight * 0.5f;
             return new[]
             {
                 new Vector3(0f, -y, 0f),

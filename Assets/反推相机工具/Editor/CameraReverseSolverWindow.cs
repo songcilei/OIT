@@ -68,10 +68,11 @@ namespace CameraReverseTool.Editor
         private float firstPlaneWidth = 1f;
         private float sharedPlaneHeight = 1f;
         private float secondPlaneDepth = 1f;
+        private TwoPlaneSharedEdgeMode sharedEdgeMode = TwoPlaneSharedEdgeMode.Vertical;
         private float cubeWidth = 1f;
         private float cubeHeight = 1f;
         private float cubeDepth = 1f;
-        private Vector2[] imagePoints = CreateDefaultImagePoints(8);
+        private Vector2[] imagePoints = CreateDefaultTwoPlaneImagePoints(TwoPlaneSharedEdgeMode.Vertical);
         private Vector2[] projectedPoints;
         private int draggingPoint = -1;
         private CameraReverseSolveResult lastResult;
@@ -125,7 +126,8 @@ namespace CameraReverseTool.Editor
                 firstPlaneWidth = Mathf.Max(0.0001f, EditorGUILayout.FloatField("First Plane Width", firstPlaneWidth));
                 sharedPlaneHeight = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Shared Height", sharedPlaneHeight));
                 secondPlaneDepth = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Second Plane Depth", secondPlaneDepth));
-                EditorGUILayout.HelpBox("Points 0-3 are the first plane. Points 4-7 are the second perpendicular plane. Points 0/4 and 3/7 represent the shared edge.", MessageType.Info);
+                sharedEdgeMode = (TwoPlaneSharedEdgeMode)EditorGUILayout.EnumPopup("Shared Edge", sharedEdgeMode);
+                EditorGUILayout.HelpBox(GetTwoPlanePointGuide(), MessageType.Info);
             }
             else
             {
@@ -263,12 +265,29 @@ namespace CameraReverseTool.Editor
                 return new Color(1f, 0.45f, 0.1f);
             }
 
-            if (index == 3 || index == 7)
+            if (IsSecondSharedPoint(index))
             {
                 return new Color(1f, 0.1f, 0.85f);
             }
 
             return Color.yellow;
+        }
+
+        private bool IsSecondSharedPoint(int index)
+        {
+            return sharedEdgeMode == TwoPlaneSharedEdgeMode.Vertical
+                ? index == 3 || index == 7
+                : index == 1 || index == 5;
+        }
+
+        private string GetTwoPlanePointGuide()
+        {
+            if (sharedEdgeMode == TwoPlaneSharedEdgeMode.Vertical)
+            {
+                return "Points 0-3 are the first plane. Points 4-7 are the second perpendicular plane. Vertical shared edge: 0/4 are the lower end, 3/7 are the upper end.";
+            }
+
+            return "Points 0-3 are the first plane. Points 4-7 are the second perpendicular plane. Horizontal shared edge: 0/4 are the left end, 1/5 are the right end.";
         }
 
         private Rect CalculateImageRect(Rect viewportRect)
@@ -478,7 +497,7 @@ namespace CameraReverseTool.Editor
         private Vector3[] CreateWorldPoints()
         {
             return solveMode == SolveMode.TwoPlanes8Points
-                ? CameraReverseGeometry.CreateTwoPlanePoints(firstPlaneWidth, sharedPlaneHeight, secondPlaneDepth)
+                ? CameraReverseGeometry.CreateTwoPlanePoints(firstPlaneWidth, sharedPlaneHeight, secondPlaneDepth, sharedEdgeMode)
                 : CameraReverseGeometry.CreateCubePoints(cubeWidth, cubeHeight, cubeDepth);
         }
 
@@ -547,19 +566,25 @@ namespace CameraReverseTool.Editor
 
         private void ResetPointCount()
         {
-            imagePoints = CreateDefaultImagePoints(8);
+            imagePoints = solveMode == SolveMode.TwoPlanes8Points
+                ? CreateDefaultTwoPlaneImagePoints(sharedEdgeMode)
+                : CreateDefaultCubeImagePoints();
         }
 
-        private static Vector2[] CreateDefaultImagePoints(int count)
+        private static Vector2[] CreateDefaultTwoPlaneImagePoints(TwoPlaneSharedEdgeMode mode)
         {
-            if (count == 4)
+            if (mode == TwoPlaneSharedEdgeMode.Horizontal)
             {
                 return new[]
                 {
-                    new Vector2(0.25f, 0.25f),
-                    new Vector2(0.75f, 0.25f),
+                    new Vector2(0.25f, 0.42f),
+                    new Vector2(0.75f, 0.42f),
                     new Vector2(0.75f, 0.75f),
-                    new Vector2(0.25f, 0.75f)
+                    new Vector2(0.25f, 0.75f),
+                    new Vector2(0.25f, 0.42f),
+                    new Vector2(0.75f, 0.42f),
+                    new Vector2(0.85f, 0.22f),
+                    new Vector2(0.15f, 0.22f)
                 };
             }
 
@@ -573,6 +598,21 @@ namespace CameraReverseTool.Editor
                 new Vector2(0.18f, 0.35f),
                 new Vector2(0.18f, 0.85f),
                 new Vector2(0.35f, 0.75f)
+            };
+        }
+
+        private static Vector2[] CreateDefaultCubeImagePoints()
+        {
+            return new[]
+            {
+                new Vector2(0.25f, 0.25f),
+                new Vector2(0.75f, 0.25f),
+                new Vector2(0.75f, 0.75f),
+                new Vector2(0.25f, 0.75f),
+                new Vector2(0.35f, 0.35f),
+                new Vector2(0.85f, 0.35f),
+                new Vector2(0.85f, 0.85f),
+                new Vector2(0.35f, 0.85f)
             };
         }
 

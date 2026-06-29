@@ -8,7 +8,7 @@ namespace CameraReverseTool.Editor
         [Test]
         public void TwoPlanePresetCreatesPerpendicularPlanesWithSharedEdge()
         {
-            Vector3[] points = CameraReverseGeometry.CreateTwoPlanePoints(4f, 2f, 3f);
+            Vector3[] points = CameraReverseGeometry.CreateTwoPlanePoints(4f, 2f, 3f, TwoPlaneSharedEdgeMode.Vertical);
 
             Assert.AreEqual(8, points.Length);
             Assert.AreEqual(new Vector3(0f, -1f, 0f), points[0]);
@@ -19,6 +19,22 @@ namespace CameraReverseTool.Editor
             Assert.AreEqual(new Vector3(0f, -1f, 3f), points[5]);
             Assert.AreEqual(new Vector3(0f, 1f, 3f), points[6]);
             Assert.AreEqual(points[3], points[7]);
+        }
+
+        [Test]
+        public void TwoPlanePresetCanShareHorizontalEdge()
+        {
+            Vector3[] points = CameraReverseGeometry.CreateTwoPlanePoints(4f, 2f, 3f, TwoPlaneSharedEdgeMode.Horizontal);
+
+            Assert.AreEqual(8, points.Length);
+            Assert.AreEqual(new Vector3(-2f, 0f, 0f), points[0]);
+            Assert.AreEqual(new Vector3(2f, 0f, 0f), points[1]);
+            Assert.AreEqual(new Vector3(2f, 2f, 0f), points[2]);
+            Assert.AreEqual(new Vector3(-2f, 2f, 0f), points[3]);
+            Assert.AreEqual(points[0], points[4]);
+            Assert.AreEqual(points[1], points[5]);
+            Assert.AreEqual(new Vector3(2f, 0f, 3f), points[6]);
+            Assert.AreEqual(new Vector3(-2f, 0f, 3f), points[7]);
         }
 
         [Test]
