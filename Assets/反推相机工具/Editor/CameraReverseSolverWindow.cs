@@ -19,7 +19,7 @@ namespace CameraReverseTool.Editor
 
         private enum SolveMode
         {
-            TwoPlanes8Points,
+            Plane4Points,
             Cube8Points
         }
 
@@ -34,16 +34,12 @@ namespace CameraReverseTool.Editor
         private const float MinPreviewZoom = 0.25f;
         private const float MaxPreviewZoom = 6f;
         private const float PreviewViewportHeight = 640f;
-        private static readonly int[,] TwoPlaneEdges =
+        private static readonly int[,] PlaneEdges =
         {
             { 0, 1 },
             { 1, 2 },
             { 2, 3 },
-            { 3, 0 },
-            { 4, 5 },
-            { 5, 6 },
-            { 6, 7 },
-            { 7, 4 }
+            { 3, 0 }
         };
 
         private static readonly int[,] CubeEdges =
@@ -63,16 +59,14 @@ namespace CameraReverseTool.Editor
         };
 
         private Texture2D referenceTexture;
-        private SolveMode solveMode = SolveMode.TwoPlanes8Points;
+        private SolveMode solveMode = SolveMode.Plane4Points;
         private InitialGuessMode initialGuessMode = InitialGuessMode.SelectedCamera;
-        private float firstPlaneWidth = 1f;
-        private float sharedPlaneHeight = 1f;
-        private float secondPlaneDepth = 1f;
-        private TwoPlaneSharedEdgeMode sharedEdgeMode = TwoPlaneSharedEdgeMode.Vertical;
+        private float planeWidth = 1f;
+        private float planeHeight = 1f;
         private float cubeWidth = 1f;
         private float cubeHeight = 1f;
         private float cubeDepth = 1f;
-        private Vector2[] imagePoints = CreateDefaultTwoPlaneImagePoints(TwoPlaneSharedEdgeMode.Vertical);
+        private Vector2[] imagePoints = CreateDefaultImagePoints(4);
         private Vector2[] projectedPoints;
         private int draggingPoint = -1;
         private CameraReverseSolveResult lastResult;
@@ -121,13 +115,11 @@ namespace CameraReverseTool.Editor
 
             initialGuessMode = (InitialGuessMode)EditorGUILayout.EnumPopup("Initial Guess", initialGuessMode);
 
-            if (solveMode == SolveMode.TwoPlanes8Points)
+            if (solveMode == SolveMode.Plane4Points)
             {
-                firstPlaneWidth = Mathf.Max(0.0001f, EditorGUILayout.FloatField("First Plane Width", firstPlaneWidth));
-                sharedPlaneHeight = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Shared Height", sharedPlaneHeight));
-                secondPlaneDepth = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Second Plane Depth", secondPlaneDepth));
-                sharedEdgeMode = (TwoPlaneSharedEdgeMode)EditorGUILayout.EnumPopup("Shared Edge", sharedEdgeMode);
-                EditorGUILayout.HelpBox(GetTwoPlanePointGuide(), MessageType.Info);
+                planeWidth = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Plane Width", planeWidth));
+                planeHeight = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Plane Height", planeHeight));
+                EditorGUILayout.HelpBox("Point order: 0 bottom-left, 1 bottom-right, 2 top-right, 3 top-left.", MessageType.Info);
             }
             else
             {
@@ -209,7 +201,7 @@ namespace CameraReverseTool.Editor
                     continue;
                 }
 
-                Handles.color = GetPickedPointColor(i);
+                Handles.color = Color.yellow;
                 Handles.DrawSolidDisc(screen, Vector3.forward, HandleRadius);
                 Handles.color = Color.black;
                 Handles.DrawWireDisc(screen, Vector3.forward, HandleRadius);
@@ -238,7 +230,7 @@ namespace CameraReverseTool.Editor
 
         private void DrawPointLines(Rect viewportRect, Rect imageRect, Vector2[] points, Color color)
         {
-            int[,] edges = solveMode == SolveMode.TwoPlanes8Points ? TwoPlaneEdges : CubeEdges;
+            int[,] edges = points.Length == 4 ? PlaneEdges : CubeEdges;
             Handles.color = color;
             for (int i = 0; i < edges.GetLength(0); i++)
             {
@@ -251,43 +243,6 @@ namespace CameraReverseTool.Editor
 
                 Handles.DrawAAPolyLine(3f, start, end);
             }
-        }
-
-        private Color GetPickedPointColor(int index)
-        {
-            if (solveMode != SolveMode.TwoPlanes8Points)
-            {
-                return Color.yellow;
-            }
-
-            if (index == 0 || index == 4)
-            {
-                return new Color(1f, 0.45f, 0.1f);
-            }
-
-            if (IsSecondSharedPoint(index))
-            {
-                return new Color(1f, 0.1f, 0.85f);
-            }
-
-            return Color.yellow;
-        }
-
-        private bool IsSecondSharedPoint(int index)
-        {
-            return sharedEdgeMode == TwoPlaneSharedEdgeMode.Vertical
-                ? index == 3 || index == 7
-                : index == 1 || index == 5;
-        }
-
-        private string GetTwoPlanePointGuide()
-        {
-            if (sharedEdgeMode == TwoPlaneSharedEdgeMode.Vertical)
-            {
-                return "Points 0-3 are the first plane. Points 4-7 are the second perpendicular plane. Vertical shared edge: 0/4 are the lower end, 3/7 are the upper end.";
-            }
-
-            return "Points 0-3 are the first plane. Points 4-7 are the second perpendicular plane. Horizontal shared edge: 0/4 are the left end, 1/5 are the right end.";
         }
 
         private Rect CalculateImageRect(Rect viewportRect)
@@ -496,8 +451,8 @@ namespace CameraReverseTool.Editor
 
         private Vector3[] CreateWorldPoints()
         {
-            return solveMode == SolveMode.TwoPlanes8Points
-                ? CameraReverseGeometry.CreateTwoPlanePoints(firstPlaneWidth, sharedPlaneHeight, secondPlaneDepth, sharedEdgeMode)
+            return solveMode == SolveMode.Plane4Points
+                ? CameraReverseGeometry.CreatePlanePoints(planeWidth, planeHeight)
                 : CameraReverseGeometry.CreateCubePoints(cubeWidth, cubeHeight, cubeDepth);
         }
 
@@ -566,43 +521,22 @@ namespace CameraReverseTool.Editor
 
         private void ResetPointCount()
         {
-            imagePoints = solveMode == SolveMode.TwoPlanes8Points
-                ? CreateDefaultTwoPlaneImagePoints(sharedEdgeMode)
-                : CreateDefaultCubeImagePoints();
+            imagePoints = CreateDefaultImagePoints(solveMode == SolveMode.Plane4Points ? 4 : 8);
         }
 
-        private static Vector2[] CreateDefaultTwoPlaneImagePoints(TwoPlaneSharedEdgeMode mode)
+        private static Vector2[] CreateDefaultImagePoints(int count)
         {
-            if (mode == TwoPlaneSharedEdgeMode.Horizontal)
+            if (count == 4)
             {
                 return new[]
                 {
-                    new Vector2(0.25f, 0.42f),
-                    new Vector2(0.75f, 0.42f),
+                    new Vector2(0.25f, 0.25f),
+                    new Vector2(0.75f, 0.25f),
                     new Vector2(0.75f, 0.75f),
-                    new Vector2(0.25f, 0.75f),
-                    new Vector2(0.25f, 0.42f),
-                    new Vector2(0.75f, 0.42f),
-                    new Vector2(0.85f, 0.22f),
-                    new Vector2(0.15f, 0.22f)
+                    new Vector2(0.25f, 0.75f)
                 };
             }
 
-            return new[]
-            {
-                new Vector2(0.35f, 0.25f),
-                new Vector2(0.75f, 0.25f),
-                new Vector2(0.75f, 0.75f),
-                new Vector2(0.35f, 0.75f),
-                new Vector2(0.35f, 0.25f),
-                new Vector2(0.18f, 0.35f),
-                new Vector2(0.18f, 0.85f),
-                new Vector2(0.35f, 0.75f)
-            };
-        }
-
-        private static Vector2[] CreateDefaultCubeImagePoints()
-        {
             return new[]
             {
                 new Vector2(0.25f, 0.25f),
