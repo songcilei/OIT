@@ -12,6 +12,8 @@ public class DimensionCompressTool : EditorWindow
     private Texture2D _outTexture;
     private string center;
     private string normal;
+    private string offset;
+    private string resultPath;
     [MenuItem("工具/图片降维压缩")]
     static void DCwin()
     {
@@ -32,6 +34,7 @@ public class DimensionCompressTool : EditorWindow
         
         GUILayout.Label("Center:"+center);
         GUILayout.Label("Normal:"+normal);
+        GUILayout.Label("Offset:"+ offset);
         
         if (GUILayout.Button("压缩",GUILayout.Height(50)))
         {
@@ -56,9 +59,9 @@ public class DimensionCompressTool : EditorWindow
         _outTexture = new Texture2D(_texture.width,_texture.height,TextureFormat.RGB24, false,true);
         
         EnableTexWrite(_texture);
-        var col_A = ComputeTex(_texture,out Vector3 massCenterA,out Vector3 NormalA);
-        ZwriteTextureInLocal(col_A,"cmpTex.png");
-        SetInfo2Material(massCenterA, NormalA);
+        var col_A = ComputeTex(_texture,out Vector3 massCenterA,out Vector3 NormalA,out Vector3 Offset);
+        ZwriteTextureInLocal(col_A,_texture.name +"_cmp.png");
+        SetInfo2Material(massCenterA, NormalA,Offset);
     }
 
     private void CompressDNTexture()
@@ -67,13 +70,14 @@ public class DimensionCompressTool : EditorWindow
         
         EnableTexWrite(_texture);
         EnableTexWrite(_texture2);
-        var col_A = ComputeTex(_texture,out Vector3 massCenterA,out Vector3 NormalA);
+        var col_A = ComputeTex(_texture,out Vector3 massCenterA,out Vector3 NormalA,out Vector3 Offset);
         center = massCenterA.ToString();
         normal = NormalA.ToString();
-        ZwriteTextureInLocal(col_A,_texture2,"DNcmpTex.png");
+        offset = Offset.ToString();
+        ZwriteTextureInLocal(col_A,_texture2, _texture.name +"DNcmpTex.png");
 
 
-        SetInfo2Material(massCenterA, NormalA);
+        SetInfo2Material(massCenterA, NormalA,Offset);
 
     }
     
@@ -83,9 +87,9 @@ public class DimensionCompressTool : EditorWindow
         
         EnableTexWrite(_texture);
 
-        var col_A = ComputeTex(_texture,out Vector3 massCenter,out Vector3 Normal);
+        var col_A = ComputeTex(_texture,out Vector3 massCenter,out Vector3 Normal,out Vector3 offset);
         
-        var outCol = CreateDebugTex(_texture.GetPixels(),col_A,massCenter, Normal,"");
+        var outCol = CreateDebugTex(_texture.GetPixels(),col_A,massCenter, Normal, offset,"");
 
         ZwriteTextureInLocal(outCol,"Debug.png");
     }
@@ -99,7 +103,7 @@ public class DimensionCompressTool : EditorWindow
         importer.SaveAndReimport();
     }
 
-    private Color[] ComputeTex(Texture2D tex,out Vector3 massC,out Vector3 N)
+    private Color[] ComputeTex(Texture2D tex,out Vector3 massC,out Vector3 N,out Vector3 offset)
     {
         var Colors = tex.GetPixels();
         
@@ -114,14 +118,32 @@ public class DimensionCompressTool : EditorWindow
                 // points[i * tex.width + j].y = Mathf.Pow(points[i * tex.width + j].y, 2.2f);
             }
         }
+        //通过点云最小二乘法 求出一个唯一正交基
         CloudPointUnitl.plane_from_points(points,out Vector3 massCenter,out Vector3 Normal);
         massC = massCenter;
         N = Normal;
+        offset = Vector3.zero;
         for (int i = 0; i < Colors.Length; i++)
         {
             Vector4 c = Colors[i];
+//方法一 :   保存XY偏移量  然后根据正交基进行转换     平面一般式
+            
+            // 计算点到平面的有向距离  
             float dis = Vector3.Dot((Vector3)c - massCenter, Normal.normalized);
-            Vector3 c2 = (Vector3)c - dis * Normal.normalized;
+            // 把点沿法线方向投影到平面上 即把点都推到一个平面上去 这样他的Z 都是统一的一个值了  就变成了在一个正交基下 xy 和正交基的偏移向量
+            Vector3 c2 = (Vector3)c - dis * Normal.normalized;//目标点相对平面基准点(正交基)的偏移向量
+
+//方法二 :   纯偏移  记录正交基偏移比列      平面点法式  A(x-x_0)+B(y-y_0)+C(z-z_0) = 0  ABC是法线   x_0,y_0,z_0是平面上的点
+            //变形后可得  A = n_x/n_z  B = n_y/n_z  C = D-A·x_0 - B·y_0
+            //回解公式 :
+            //fixed b = _Offset.z - dot(col.xy, _Offset.xy);
+            //col.rgb = fixed3(col.x, col.y, b);
+            Vector3 param = Vector3.zero;
+            param.x = Normal.x * (1.0f / Normal.z);
+            param.y = Normal.y * (1.0f / Normal.z);
+            param.z = massCenter.z + Vector2.Dot(new Vector2(massCenter.x, massCenter.y), new Vector2(param.x, param.y));
+            offset = param;
+            // Debug.Log($"{param.x}, {param.y}, {param.z}");
             c2.z = 0;
             outColors[i] = (Vector4)c2;
         }
@@ -130,7 +152,7 @@ public class DimensionCompressTool : EditorWindow
 
     }
 
-    private Color[] CreateDebugTex(Color[] Colors,Color[] outColors,Vector3 massCenter,Vector3 Normal,string path)
+    private Color[] CreateDebugTex(Color[] Colors,Color[] outColors,Vector3 massCenter,Vector3 Normal,Vector3 offset,string path)
     {
         int errorCount = 0;
         Color[] compressedColors = new Color[Colors.Length];
@@ -144,6 +166,8 @@ public class DimensionCompressTool : EditorWindow
             c = outColors[i];
             Debug.Log("mass:"+massCenter);
             Debug.Log("normal:"+Normal);
+            Debug.Log("param:"+offset);
+            //这里是解平面公式 ax +by+cz =0  移项  c = -(ax+by)/z        c.z = (tex.z - massCetner.z) 
             c.z =  -((c.x - massCenter.x) * Normal.x + (c.y - massCenter.y) * Normal.y) / Normal.z + massCenter.z;
             // c.z = (c.x-massCenter.x);
             if (Mathf.Abs(c.x - x) > 0.05) errorCount++;
@@ -167,6 +191,7 @@ public class DimensionCompressTool : EditorWindow
         string path = "Assets/贴图降维压缩/";
         string fullPath = path + name;
         File.WriteAllBytes(fullPath, _outTexture.EncodeToPNG());
+        resultPath = fullPath;
         AssetDatabase.Refresh();
         
     }
@@ -195,12 +220,13 @@ public class DimensionCompressTool : EditorWindow
         _outTexture.Apply();
         string path = "Assets/贴图降维压缩/";
         string fullPath = path + name;
+        resultPath = fullPath;
         File.WriteAllBytes(fullPath, _outTexture.EncodeToPNG());
         AssetDatabase.Refresh();
         
     }
 
-    private void SetInfo2Material(Vector3 massCenterA,Vector3 NormalA)
+    private void SetInfo2Material(Vector3 massCenterA,Vector3 NormalA,Vector3 offset)
     {
         if (Selection.activeGameObject != null)
         {
@@ -209,20 +235,13 @@ public class DimensionCompressTool : EditorWindow
             {
                 rd.sharedMaterial.SetVector("_Center", massCenterA);
                 rd.sharedMaterial.SetVector("_TNormal", NormalA);
+                rd.sharedMaterial.SetVector("_Offset",offset);
+                var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(resultPath);
+                rd.sharedMaterial.SetTexture("_BaseMap",tex);
             }
         }
     }
     
-    private bool CheckTextureNormalMode(Texture2D tex)
-    {
-        string path = AssetDatabase.GetAssetPath(tex);
-        TextureImporter importer = TextureImporter.GetAtPath(path) as TextureImporter;
-        if (importer.textureType == TextureImporterType.NormalMap)
-        {
-            return true;
-        }
-        return false;
-    }
 
     private TextureImporterType SetTextureType(Texture2D tex,TextureImporterType type)
     {

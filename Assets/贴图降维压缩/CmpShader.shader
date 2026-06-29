@@ -23,8 +23,11 @@ Shader "URP/CMPShader"
         // 高光系数
         _Gloss ("Gloss", Range(8.0, 256)) = 20
         
+        [KeywordEnum(Normal,Offset)]_Mode("Mode",Float)=0
+        
         _Center("Center", Vector) = (1,1,1,1)
         _TNormal("Normal", Vector) = (1,1,1,1)
+        _Offset("Offset", Vector)=(0,0,0,0)
         // 是否计算多光源
         [Toggle(_AdditionalLights)] _AddLights ("AddLights", Float) = 1
     }
@@ -47,6 +50,7 @@ Shader "URP/CMPShader"
         float _Gloss;
         float4 _Center;
         float4 _TNormal;
+        float4 _Offset;
         CBUFFER_END
         ENDHLSL
         
@@ -66,7 +70,7 @@ Shader "URP/CMPShader"
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
             #pragma multi_compile _ _SHADOWS_SOFT
-            
+            #pragma multi_compile _ _MODE_NORMAL _MODE_OFFSET
             #pragma vertex vert
             #pragma fragment frag
             
@@ -165,12 +169,19 @@ Shader "URP/CMPShader"
                 half3 normalWS;
                 float4 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, i.uv) ;
                 float3 c = albedo;
+#if defined(_MODE_NORMAL)                
                 _Center = pow(_Center,2.2f);
-                // _TNormal = pow(_TNormal,2.2f);
-                // c.xy = pow(c.xy,1/2.2f);
                 float b = -((c.x - _Center.x) * _TNormal.x + (c.y - _Center.y) * _TNormal.y) / _TNormal.z + _Center.z;
                 // float b = (c.x-pow(_Center.x,2.2f));
                 c.b = b;
+#elif defined(_MODE_OFFSET)
+                // _Offset.z = pow(_Offset.z,2.2f);
+                // float2 cc = pow(c.xy,2.2f);
+                float b = _Offset.z - dot(c.xy, _Offset.xy);
+                c.b = b;
+#endif 
+                
+                
                 #ifdef _NORMALMAP// 是否使用法线纹理
                     viewDirWS = half3(i.normalWS.w, i.tangentWS.w, i.bitangentWS.w);
                     //可以使用该方法替代下面的法线纹理采样，但是需要引用函数库ShaderLibrary/SurfaceInput.hlsl

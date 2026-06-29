@@ -25,6 +25,7 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
+  - _MODE_NORMAL
   - _NORMALMAP
   m_InvalidKeywords: []
   m_LightmapFlags: 4
@@ -38,7 +39,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: 001a39dcd54dbfb45bc0d85ce217640f, type: 3}
+        m_Texture: {fileID: 2800000, guid: 256c28680e7700f4ba4a7393ef64865f, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
@@ -100,7 +101,7 @@ Material:
     - _AlphaToMask: 0
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
-    - _BumpScale: -1
+    - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
     - _Cull: 2
@@ -117,6 +118,7 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _Metallic: 0
+    - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
@@ -135,6 +137,7 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _Diffuse: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _Offset: {r: 0.6976756, g: -1.5233622, b: 0.02878654, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _Specular: {r: 1, g: 1, b: 1, a: 1}
     - _TNormal: {r: -1313.5874, g: 2868.1946, b: -1882.8054, a: 0}
