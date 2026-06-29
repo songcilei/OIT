@@ -53,7 +53,7 @@ public class DimensionCompressTool : EditorWindow
     
     private void CompressTexture()
     {
-        _outTexture = new Texture2D(_texture.width,_texture.height,TextureFormat.RGB24, false);
+        _outTexture = new Texture2D(_texture.width,_texture.height,TextureFormat.RGB24, false,true);
         
         EnableTexWrite(_texture);
         var col_A = ComputeTex(_texture,out Vector3 massCenterA,out Vector3 NormalA);
@@ -63,7 +63,7 @@ public class DimensionCompressTool : EditorWindow
 
     private void CompressDNTexture()
     {
-        _outTexture = new Texture2D(_texture.width,_texture.height,TextureFormat.RGBA32, false);
+        _outTexture = new Texture2D(_texture.width,_texture.height,TextureFormat.RGBA32, false,true);
         
         EnableTexWrite(_texture);
         EnableTexWrite(_texture2);
@@ -79,7 +79,7 @@ public class DimensionCompressTool : EditorWindow
     
     private void CompressDebugTexture()
     {
-        _outTexture = new Texture2D(_texture.width,_texture.height,TextureFormat.RGB24, false);
+        _outTexture = new Texture2D(_texture.width,_texture.height,TextureFormat.RGB24, false,true);
         
         EnableTexWrite(_texture);
 
@@ -102,6 +102,7 @@ public class DimensionCompressTool : EditorWindow
     private Color[] ComputeTex(Texture2D tex,out Vector3 massC,out Vector3 N)
     {
         var Colors = tex.GetPixels();
+        
         var outColors = new Color[Colors.Length];
         Vector3[] points = new Vector3[tex.width * tex.height];
         for (int i = 0; i < tex.height; i++)
@@ -109,6 +110,8 @@ public class DimensionCompressTool : EditorWindow
             for (int j = 0; j < tex.width; j++)
             {
                 points[i*tex.width+j] = (Vector4)Colors[i*tex.width+j];
+                // points[i * tex.width + j].x = Mathf.Pow(points[i * tex.width + j].x, 2.2f);
+                // points[i * tex.width + j].y = Mathf.Pow(points[i * tex.width + j].y, 2.2f);
             }
         }
         CloudPointUnitl.plane_from_points(points,out Vector3 massCenter,out Vector3 Normal);
@@ -169,8 +172,11 @@ public class DimensionCompressTool : EditorWindow
     }
     private void ZwriteTextureInLocal(Color[] colors,Texture2D tex,string name)
     {
+        
+        var temp =SetTextureType(tex, TextureImporterType.Default);
+        
         var Ncolors = tex.GetPixels();
-   
+        
         if (Ncolors.Length != colors.Length)
         {
             Debug.LogError("将要压缩的两张贴图分辨率不同！！");
@@ -179,11 +185,11 @@ public class DimensionCompressTool : EditorWindow
         
         for (int i = 0; i < colors.Length; i++)
         {
-
             colors[i].b = Ncolors[i].r;
             colors[i].a = Ncolors[i].g;
         }
         
+        SetTextureType(tex,temp);
         
         _outTexture.SetPixels(colors);
         _outTexture.Apply();
@@ -205,5 +211,26 @@ public class DimensionCompressTool : EditorWindow
                 rd.sharedMaterial.SetVector("_TNormal", NormalA);
             }
         }
+    }
+    
+    private bool CheckTextureNormalMode(Texture2D tex)
+    {
+        string path = AssetDatabase.GetAssetPath(tex);
+        TextureImporter importer = TextureImporter.GetAtPath(path) as TextureImporter;
+        if (importer.textureType == TextureImporterType.NormalMap)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    private TextureImporterType SetTextureType(Texture2D tex,TextureImporterType type)
+    {
+        string path = AssetDatabase.GetAssetPath(tex);
+        TextureImporter importer = TextureImporter.GetAtPath(path) as TextureImporter;
+        var tempType = importer.textureType;
+        importer.textureType = type;
+        importer.SaveAndReimport();
+        return tempType;
     }
 }

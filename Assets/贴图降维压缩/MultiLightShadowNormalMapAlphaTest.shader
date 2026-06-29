@@ -1,5 +1,5 @@
 
-Shader "URP/CMPShader"
+Shader "URP/MultiLightShadowNormalMapAlphaTest"
 {
     Properties
     {
@@ -8,13 +8,13 @@ Shader "URP/CMPShader"
         [MainTexture] _BaseMap ("Albedo", 2D) = "white" { }
         
         // 透明度裁剪
-//        [Toggle(_ALPHATEST_ON)] _EnableAlphaTest ("Alpha Cutoff", Float) = 0.0
-//        _Cutoff ("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
+        [Toggle(_ALPHATEST_ON)] _EnableAlphaTest ("Alpha Cutoff", Float) = 0.0
+        _Cutoff ("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
         
         // 法线贴图
         [Toggle(_NORMALMAP)] _EnableBumpMap ("Bump Map", Float) = 0.0
         _BumpScale ("Normal Scale", Float) = 1.0
-//        _BumpMap ("Normal Map", 2D) = "bump" { }
+        _BumpMap ("Normal Map", 2D) = "bump" { }
         
         // 漫反射叠加颜色
         _Diffuse ("Diffuse", Color) = (1, 1, 1, 1)
@@ -23,8 +23,6 @@ Shader "URP/CMPShader"
         // 高光系数
         _Gloss ("Gloss", Range(8.0, 256)) = 20
         
-        _Center("Center", Vector) = (1,1,1,1)
-        _TNormal("Normal", Vector) = (1,1,1,1)
         // 是否计算多光源
         [Toggle(_AdditionalLights)] _AddLights ("AddLights", Float) = 1
     }
@@ -45,8 +43,6 @@ Shader "URP/CMPShader"
         float4 _Diffuse;
         float4 _Specular;
         float _Gloss;
-        float4 _Center;
-        float4 _TNormal;
         CBUFFER_END
         ENDHLSL
         
@@ -79,7 +75,7 @@ Shader "URP/CMPShader"
             SAMPLER(sampler_BaseMap);
             TEXTURE2D(_BumpMap);
             SAMPLER(sampler_BumpMap);
-            float4 _BaseMap_TexelSize;
+            
             
             struct Attributes
             {
@@ -163,23 +159,13 @@ Shader "URP/CMPShader"
             {
                 half3 viewDirWS ;
                 half3 normalWS;
-                float4 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, i.uv) ;
-                float3 c = albedo;
-                _Center = pow(_Center,2.2f);
-                // _TNormal = pow(_TNormal,2.2f);
-                // c.xy = pow(c.xy,1/2.2f);
-                float b = -((c.x - _Center.x) * _TNormal.x + (c.y - _Center.y) * _TNormal.y) / _TNormal.z + _Center.z;
-                // float b = (c.x-pow(_Center.x,2.2f));
-                c.b = b;
+                
                 #ifdef _NORMALMAP// 是否使用法线纹理
                     viewDirWS = half3(i.normalWS.w, i.tangentWS.w, i.bitangentWS.w);
                     //可以使用该方法替代下面的法线纹理采样，但是需要引用函数库ShaderLibrary/SurfaceInput.hlsl
                     //half3 normalTS = SampleNormal(i.uv, TEXTURE2D_ARGS(_BumpMap, sampler_BumpMap), _BumpScale);
                     //or
-                    // half3 normalTS = UnpackNormalScale(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, i.uv), _BumpScale);
-                    float2 normalXY = (float2(pow(albedo.b,1/2.2f),albedo.a)*2-1)*_BumpScale;
-                    float normalZ = max(0,sqrt(1.0 - saturate(dot(normalXY, normalXY))));
-                    float3 normalTS =  float3(normalXY, normalZ);
+                    half3 normalTS = UnpackNormalScale(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, i.uv), _BumpScale);
                     normalWS = TransformTangentToWorld(normalTS, half3x3(i.tangentWS.xyz, i.bitangentWS.xyz, i.normalWS.xyz));
                 
                 #else
@@ -188,13 +174,32 @@ Shader "URP/CMPShader"
                 #endif
                 normalWS = NormalizeNormalPerPixel(normalWS);
                 viewDirWS = SafeNormalize(viewDirWS);
-   
+                
+                //纹理采样
+                //可以使用该方法替代下面的纹理采集操作，但是需要引用函数库ShaderLibrary/SurfaceInput.hlsl
+                //half4 albedoAlpha = SampleAlbedoAlpha(i.uv, TEXTURE2D_ARGS(_BaseMap, sampler_BaseMap));
+                // or
+                half4 albedoAlpha = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, i.uv);
+                
+                // 透明度裁剪
+                //可以使用该方法替代下面的裁剪操作，但是需要引用函数库ShaderLibrary/SurfaceInput.hlsl
+                //half alpha = Alpha(albedoAlpha.a, _BaseColor, _Cutoff);
+                //or
+                #if defined(_ALPHATEST_ON)
+                    clip(albedoAlpha.a - _Cutoff);
+                #endif
+                
+                // 漫反射系数
+                //half3 albedo = albedoAlpha.rgb * _BaseColor.rgb;
+                // or
+                half3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, i.uv).rgb * _BaseColor.rgb;
+                
                 // 获取阴影坐标
                 float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS.xyz);
                 
                 // 计算主光源与阴影
                 Light mainLight = GetMainLight(shadowCoord);
-                half3 diffuse = LightingBased(c, mainLight, normalWS, viewDirWS);
+                half3 diffuse = LightingBased(albedo, mainLight, normalWS, viewDirWS);
                 // 计算其他光源与阴影
                 // 需要将光源组件的ShadowType参数打开，并且将管线中的CastShadows勾选，副光源才会产生阴影
                 #ifdef _AdditionalLights
@@ -202,12 +207,12 @@ Shader "URP/CMPShader"
                     for (uint lightIndex = 0u; lightIndex < pixelLightCount; ++ lightIndex)
                     {
                         Light light = GetAdditionalLight(lightIndex, i.positionWS);
-                        diffuse += LightingBased(c, light, normalWS, viewDirWS);
+                        diffuse += LightingBased(albedo, light, normalWS, viewDirWS);
                     }
                 #endif
                 
                 // 计算环境光
-                half3 ambient = SampleSH(normalWS) * c;
+                half3 ambient = SampleSH(normalWS) * albedo;
                 return half4(ambient + diffuse, 1.0);
             }
             
