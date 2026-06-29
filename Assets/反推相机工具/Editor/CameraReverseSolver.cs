@@ -128,25 +128,115 @@ namespace CameraReverseTool.Editor
                 return new CameraReverseSolveResult(initial, float.PositiveInfinity, float.PositiveInfinity, false);
             }
 
+            CameraReverseParameters[] seeds = CreateSeedParameters(worldPoints, initial);
             CameraReverseParameters best = initial;
-            float bestError = ComputeAverageError(worldPoints, imagePoints, best, aspect, out float bestMax);
-            float[] positionSteps = { 2f, 1f, 0.5f, 0.25f, 0.1f, 0.05f, 0.02f };
-            float[] rotationSteps = { 12f, 6f, 3f, 1.5f, 0.75f, 0.25f };
-            float[] fovSteps = { 12f, 6f, 3f, 1.5f, 0.75f, 0.25f };
+            float bestError = float.PositiveInfinity;
+            float bestMax = float.PositiveInfinity;
 
-            for (int pass = 0; pass < 8; pass++)
+            for (int i = 0; i < seeds.Length; i++)
             {
-                bool improved = false;
-                improved |= ImprovePosition(worldPoints, imagePoints, aspect, ref best, ref bestError, ref bestMax, positionSteps[Mathf.Min(pass, positionSteps.Length - 1)]);
-                improved |= ImproveRotation(worldPoints, imagePoints, aspect, ref best, ref bestError, ref bestMax, rotationSteps[Mathf.Min(pass, rotationSteps.Length - 1)]);
-                improved |= ImproveFov(worldPoints, imagePoints, aspect, ref best, ref bestError, ref bestMax, fovSteps[Mathf.Min(pass, fovSteps.Length - 1)]);
-                if (!improved && pass >= positionSteps.Length - 1)
+                CameraReverseSolveResult result = OptimizeFromSeed(worldPoints, imagePoints, seeds[i], aspect);
+                if (result.AverageNormalizedError < bestError)
                 {
-                    break;
+                    best = result.Parameters;
+                    bestError = result.AverageNormalizedError;
+                    bestMax = result.MaxNormalizedError;
                 }
             }
 
             return new CameraReverseSolveResult(best, bestError, bestMax, float.IsFinite(bestError));
+        }
+
+        private static CameraReverseSolveResult OptimizeFromSeed(Vector3[] worldPoints, Vector2[] imagePoints, CameraReverseParameters initial, float aspect)
+        {
+            CameraReverseParameters best = initial;
+            float bestError = ComputeAverageError(worldPoints, imagePoints, best, aspect, out float bestMax);
+            float radius = EstimateRadius(worldPoints, out _);
+            float[] positionSteps =
+            {
+                Mathf.Max(0.05f, radius),
+                Mathf.Max(0.03f, radius * 0.5f),
+                Mathf.Max(0.02f, radius * 0.25f),
+                Mathf.Max(0.01f, radius * 0.1f),
+                Mathf.Max(0.005f, radius * 0.05f),
+                Mathf.Max(0.002f, radius * 0.02f)
+            };
+            float[] rotationSteps = { 20f, 10f, 5f, 2f, 1f, 0.5f, 0.25f };
+            float[] fovSteps = { 20f, 10f, 5f, 2f, 1f, 0.5f, 0.25f };
+
+            int stepCount = Mathf.Max(positionSteps.Length, Mathf.Max(rotationSteps.Length, fovSteps.Length));
+            for (int pass = 0; pass < stepCount; pass++)
+            {
+                float positionStep = positionSteps[Mathf.Min(pass, positionSteps.Length - 1)];
+                float rotationStep = rotationSteps[Mathf.Min(pass, rotationSteps.Length - 1)];
+                float fovStep = fovSteps[Mathf.Min(pass, fovSteps.Length - 1)];
+
+                for (int iteration = 0; iteration < 64; iteration++)
+                {
+                    bool improved = false;
+                    improved |= ImprovePosition(worldPoints, imagePoints, aspect, ref best, ref bestError, ref bestMax, positionStep);
+                    improved |= ImproveRotation(worldPoints, imagePoints, aspect, ref best, ref bestError, ref bestMax, rotationStep);
+                    improved |= ImproveFov(worldPoints, imagePoints, aspect, ref best, ref bestError, ref bestMax, fovStep);
+                    if (!improved)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            return new CameraReverseSolveResult(best, bestError, bestMax, float.IsFinite(bestError));
+        }
+
+        private static CameraReverseParameters[] CreateSeedParameters(Vector3[] worldPoints, CameraReverseParameters initial)
+        {
+            float radius = EstimateRadius(worldPoints, out Vector3 center);
+            float distance = Mathf.Max(2f, radius * 4f);
+            Vector3[] directions =
+            {
+                Vector3.back,
+                Vector3.forward,
+                Vector3.left,
+                Vector3.right,
+                new Vector3(-1f, 0f, -1f).normalized,
+                new Vector3(1f, 0f, -1f).normalized,
+                new Vector3(-1f, 0f, 1f).normalized,
+                new Vector3(1f, 0f, 1f).normalized
+            };
+            float[] fovs = { initial.VerticalFov, 35f, 60f, 85f };
+            var seeds = new CameraReverseParameters[1 + directions.Length * fovs.Length];
+            seeds[0] = initial;
+            int index = 1;
+
+            for (int i = 0; i < directions.Length; i++)
+            {
+                Vector3 position = center + directions[i] * distance;
+                Quaternion rotation = Quaternion.LookRotation(center - position, Vector3.up);
+                for (int j = 0; j < fovs.Length; j++)
+                {
+                    seeds[index] = new CameraReverseParameters(position, rotation, fovs[j]);
+                    index++;
+                }
+            }
+
+            return seeds;
+        }
+
+        private static float EstimateRadius(Vector3[] worldPoints, out Vector3 center)
+        {
+            center = Vector3.zero;
+            for (int i = 0; i < worldPoints.Length; i++)
+            {
+                center += worldPoints[i];
+            }
+
+            center /= Mathf.Max(1, worldPoints.Length);
+            float radius = 1f;
+            for (int i = 0; i < worldPoints.Length; i++)
+            {
+                radius = Mathf.Max(radius, Vector3.Distance(center, worldPoints[i]));
+            }
+
+            return radius;
         }
 
         public static float ComputeAverageError(Vector3[] worldPoints, Vector2[] imagePoints, CameraReverseParameters parameters, float aspect, out float maxError)
