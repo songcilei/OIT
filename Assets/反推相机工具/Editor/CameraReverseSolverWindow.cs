@@ -34,6 +34,30 @@ namespace CameraReverseTool.Editor
         private const float MinPreviewZoom = 0.25f;
         private const float MaxPreviewZoom = 6f;
         private const float PreviewViewportHeight = 640f;
+        private static readonly int[,] PlaneEdges =
+        {
+            { 0, 1 },
+            { 1, 2 },
+            { 2, 3 },
+            { 3, 0 }
+        };
+
+        private static readonly int[,] CubeEdges =
+        {
+            { 0, 1 },
+            { 1, 2 },
+            { 2, 3 },
+            { 3, 0 },
+            { 4, 5 },
+            { 5, 6 },
+            { 6, 7 },
+            { 7, 4 },
+            { 0, 4 },
+            { 1, 5 },
+            { 2, 6 },
+            { 3, 7 }
+        };
+
         private Texture2D referenceTexture;
         private SolveMode solveMode = SolveMode.Plane4Points;
         private InitialGuessMode initialGuessMode = InitialGuessMode.SelectedCamera;
@@ -162,6 +186,12 @@ namespace CameraReverseTool.Editor
             }
 
             Handles.BeginGUI();
+            DrawPointLines(viewportRect, imageRect, imagePoints, new Color(1f, 0.9f, 0f, 0.9f));
+            if (projectedPoints != null)
+            {
+                DrawPointLines(viewportRect, imageRect, projectedPoints, new Color(0f, 0.85f, 1f, 0.75f));
+            }
+
             for (int i = 0; i < imagePoints.Length; i++)
             {
                 Vector2 screen = NormalizedToScreen(imageRect, imagePoints[i]);
@@ -195,6 +225,23 @@ namespace CameraReverseTool.Editor
             }
 
             Handles.EndGUI();
+        }
+
+        private void DrawPointLines(Rect viewportRect, Rect imageRect, Vector2[] points, Color color)
+        {
+            int[,] edges = points.Length == 4 ? PlaneEdges : CubeEdges;
+            Handles.color = color;
+            for (int i = 0; i < edges.GetLength(0); i++)
+            {
+                Vector2 start = NormalizedToScreen(imageRect, points[edges[i, 0]]);
+                Vector2 end = NormalizedToScreen(imageRect, points[edges[i, 1]]);
+                if (!viewportRect.Contains(start) && !viewportRect.Contains(end))
+                {
+                    continue;
+                }
+
+                Handles.DrawAAPolyLine(3f, start, end);
+            }
         }
 
         private Rect CalculateImageRect(Rect viewportRect)
