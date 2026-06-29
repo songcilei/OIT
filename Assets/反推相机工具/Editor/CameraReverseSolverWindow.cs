@@ -19,7 +19,7 @@ namespace CameraReverseTool.Editor
 
         private enum SolveMode
         {
-            Plane4Points,
+            TwoPlanes8Points,
             Cube8Points
         }
 
@@ -34,12 +34,16 @@ namespace CameraReverseTool.Editor
         private const float MinPreviewZoom = 0.25f;
         private const float MaxPreviewZoom = 6f;
         private const float PreviewViewportHeight = 640f;
-        private static readonly int[,] PlaneEdges =
+        private static readonly int[,] TwoPlaneEdges =
         {
             { 0, 1 },
             { 1, 2 },
             { 2, 3 },
-            { 3, 0 }
+            { 3, 0 },
+            { 4, 5 },
+            { 5, 6 },
+            { 6, 7 },
+            { 7, 4 }
         };
 
         private static readonly int[,] CubeEdges =
@@ -59,14 +63,15 @@ namespace CameraReverseTool.Editor
         };
 
         private Texture2D referenceTexture;
-        private SolveMode solveMode = SolveMode.Plane4Points;
+        private SolveMode solveMode = SolveMode.TwoPlanes8Points;
         private InitialGuessMode initialGuessMode = InitialGuessMode.SelectedCamera;
-        private float planeWidth = 1f;
-        private float planeHeight = 1f;
+        private float firstPlaneWidth = 1f;
+        private float sharedPlaneHeight = 1f;
+        private float secondPlaneDepth = 1f;
         private float cubeWidth = 1f;
         private float cubeHeight = 1f;
         private float cubeDepth = 1f;
-        private Vector2[] imagePoints = CreateDefaultImagePoints(4);
+        private Vector2[] imagePoints = CreateDefaultImagePoints(8);
         private Vector2[] projectedPoints;
         private int draggingPoint = -1;
         private CameraReverseSolveResult lastResult;
@@ -115,10 +120,12 @@ namespace CameraReverseTool.Editor
 
             initialGuessMode = (InitialGuessMode)EditorGUILayout.EnumPopup("Initial Guess", initialGuessMode);
 
-            if (solveMode == SolveMode.Plane4Points)
+            if (solveMode == SolveMode.TwoPlanes8Points)
             {
-                planeWidth = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Plane Width", planeWidth));
-                planeHeight = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Plane Height", planeHeight));
+                firstPlaneWidth = Mathf.Max(0.0001f, EditorGUILayout.FloatField("First Plane Width", firstPlaneWidth));
+                sharedPlaneHeight = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Shared Height", sharedPlaneHeight));
+                secondPlaneDepth = Mathf.Max(0.0001f, EditorGUILayout.FloatField("Second Plane Depth", secondPlaneDepth));
+                EditorGUILayout.HelpBox("Points 0-3 are the first plane. Points 4-7 are the second perpendicular plane. Points 0/4 and 3/7 represent the shared edge.", MessageType.Info);
             }
             else
             {
@@ -229,7 +236,7 @@ namespace CameraReverseTool.Editor
 
         private void DrawPointLines(Rect viewportRect, Rect imageRect, Vector2[] points, Color color)
         {
-            int[,] edges = points.Length == 4 ? PlaneEdges : CubeEdges;
+            int[,] edges = solveMode == SolveMode.TwoPlanes8Points ? TwoPlaneEdges : CubeEdges;
             Handles.color = color;
             for (int i = 0; i < edges.GetLength(0); i++)
             {
@@ -450,8 +457,8 @@ namespace CameraReverseTool.Editor
 
         private Vector3[] CreateWorldPoints()
         {
-            return solveMode == SolveMode.Plane4Points
-                ? CameraReverseGeometry.CreatePlanePoints(planeWidth, planeHeight)
+            return solveMode == SolveMode.TwoPlanes8Points
+                ? CameraReverseGeometry.CreateTwoPlanePoints(firstPlaneWidth, sharedPlaneHeight, secondPlaneDepth)
                 : CameraReverseGeometry.CreateCubePoints(cubeWidth, cubeHeight, cubeDepth);
         }
 
@@ -520,7 +527,7 @@ namespace CameraReverseTool.Editor
 
         private void ResetPointCount()
         {
-            imagePoints = CreateDefaultImagePoints(solveMode == SolveMode.Plane4Points ? 4 : 8);
+            imagePoints = CreateDefaultImagePoints(8);
         }
 
         private static Vector2[] CreateDefaultImagePoints(int count)
@@ -538,14 +545,14 @@ namespace CameraReverseTool.Editor
 
             return new[]
             {
-                new Vector2(0.25f, 0.25f),
+                new Vector2(0.35f, 0.25f),
                 new Vector2(0.75f, 0.25f),
                 new Vector2(0.75f, 0.75f),
-                new Vector2(0.25f, 0.75f),
-                new Vector2(0.35f, 0.35f),
-                new Vector2(0.85f, 0.35f),
-                new Vector2(0.85f, 0.85f),
-                new Vector2(0.35f, 0.85f)
+                new Vector2(0.35f, 0.75f),
+                new Vector2(0.35f, 0.25f),
+                new Vector2(0.18f, 0.35f),
+                new Vector2(0.18f, 0.85f),
+                new Vector2(0.35f, 0.75f)
             };
         }
 

@@ -6,15 +6,19 @@ namespace CameraReverseTool.Editor
     public sealed class CameraReverseSolverTests
     {
         [Test]
-        public void PlanePresetCreatesFourCenteredCorners()
+        public void TwoPlanePresetCreatesPerpendicularPlanesWithSharedEdge()
         {
-            Vector3[] points = CameraReverseGeometry.CreatePlanePoints(4f, 2f);
+            Vector3[] points = CameraReverseGeometry.CreateTwoPlanePoints(4f, 2f, 3f);
 
-            Assert.AreEqual(4, points.Length);
-            Assert.AreEqual(new Vector3(-2f, -1f, 0f), points[0]);
-            Assert.AreEqual(new Vector3(2f, -1f, 0f), points[1]);
-            Assert.AreEqual(new Vector3(2f, 1f, 0f), points[2]);
-            Assert.AreEqual(new Vector3(-2f, 1f, 0f), points[3]);
+            Assert.AreEqual(8, points.Length);
+            Assert.AreEqual(new Vector3(0f, -1f, 0f), points[0]);
+            Assert.AreEqual(new Vector3(4f, -1f, 0f), points[1]);
+            Assert.AreEqual(new Vector3(4f, 1f, 0f), points[2]);
+            Assert.AreEqual(new Vector3(0f, 1f, 0f), points[3]);
+            Assert.AreEqual(points[0], points[4]);
+            Assert.AreEqual(new Vector3(0f, -1f, 3f), points[5]);
+            Assert.AreEqual(new Vector3(0f, 1f, 3f), points[6]);
+            Assert.AreEqual(points[3], points[7]);
         }
 
         [Test]

@@ -18,18 +18,23 @@ namespace CameraReverseTool.Editor
 
     internal static class CameraReverseGeometry
     {
-        public static Vector3[] CreatePlanePoints(float width, float height)
+        public static Vector3[] CreateTwoPlanePoints(float firstPlaneWidth, float sharedHeight, float secondPlaneDepth)
         {
-            width = Mathf.Max(0.0001f, width);
-            height = Mathf.Max(0.0001f, height);
-            float x = width * 0.5f;
-            float y = height * 0.5f;
+            firstPlaneWidth = Mathf.Max(0.0001f, firstPlaneWidth);
+            sharedHeight = Mathf.Max(0.0001f, sharedHeight);
+            secondPlaneDepth = Mathf.Max(0.0001f, secondPlaneDepth);
+            float y = sharedHeight * 0.5f;
+
             return new[]
             {
-                new Vector3(-x, -y, 0f),
-                new Vector3(x, -y, 0f),
-                new Vector3(x, y, 0f),
-                new Vector3(-x, y, 0f)
+                new Vector3(0f, -y, 0f),
+                new Vector3(firstPlaneWidth, -y, 0f),
+                new Vector3(firstPlaneWidth, y, 0f),
+                new Vector3(0f, y, 0f),
+                new Vector3(0f, -y, 0f),
+                new Vector3(0f, -y, secondPlaneDepth),
+                new Vector3(0f, y, secondPlaneDepth),
+                new Vector3(0f, y, 0f)
             };
         }
 
