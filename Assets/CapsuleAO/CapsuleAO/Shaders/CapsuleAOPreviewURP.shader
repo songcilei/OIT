@@ -80,13 +80,14 @@ Shader "Custom/URP/Capsule AO Preview"
                 float3 albedo = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv).rgb * _Color.rgb;
                 float ambientOcclusion = saturate(CapsuleAO_ComputeAmbient(input.positionWS, normalWS) * _AmbientAOStrength);
                 float directionalOcclusion = saturate(CapsuleAO_ComputeDirectional(input.positionWS, lightDirection) * _DirectionalAOStrength);
-
                 float3 ambientLighting = SampleSH(normalWS) * _AmbientColor.rgb;
                 float3 directLighting = mainLight.color * lambert * mainLight.distanceAttenuation * mainLight.shadowAttenuation;
 
                 float3 ambient = ambientLighting * (1.0 - ambientOcclusion);
+return float4(directionalOcclusion.rrr,1);
                 float3 direct = directLighting * (1.0 - directionalOcclusion);
                 float3 color = albedo * (ambient + direct);
+                
                 return half4(color, 1.0);
             }
             ENDHLSL

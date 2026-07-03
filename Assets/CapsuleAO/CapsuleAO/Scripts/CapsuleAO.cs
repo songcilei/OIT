@@ -112,20 +112,20 @@ namespace CapsuleAOTool
         public void GetWorldCapsule(out Vector3 start, out Vector3 end, out float worldRadius)
         {
             Vector3 axisLocal = GetAxisVector(axis);
-            Vector3 worldAxisVector = transform.TransformVector(axisLocal);
-            float axisScale = Mathf.Max(worldAxisVector.magnitude, 0.0001f);
-            Vector3 worldAxis = worldAxisVector / axisScale;
+            Vector3 worldAxisVector = transform.TransformVector(axisLocal);//从局部 转换到世界
+            float axisScale = Mathf.Max(worldAxisVector.magnitude, 0.0001f);//这里是因为上面TransformVector 转换时会把缩放带入到轴向 这里是为了矫正轴向
+            Vector3 worldAxis = worldAxisVector / axisScale;//归一化轴向
 
-            Vector3 lossyScale = transform.lossyScale;
-            float radialScale = GetRadialScale(axis, lossyScale);
-            worldRadius = Mathf.Max(0.001f, radius * radialScale);
+            Vector3 lossyScale = transform.lossyScale;//真实缩放大小 带有父级的旋转和缩放
+            float radialScale = GetRadialScale(axis, lossyScale);//半径在世界空间里应该被放大多少
+            worldRadius = Mathf.Max(0.001f, radius * radialScale);//世界空间半径
 
             float worldHeight = Mathf.Max(height * axisScale, worldRadius * 2f);
             float halfSegment = Mathf.Max(0f, worldHeight * 0.5f - worldRadius);
-            Vector3 center = transform.TransformPoint(localCenter);
+            Vector3 center = transform.TransformPoint(localCenter);//从局部坐标转换到世界
 
-            start = center - worldAxis * halfSegment;
-            end = center + worldAxis * halfSegment;
+            start = center - worldAxis * halfSegment;// 获取世界空间下 胶囊的开始点
+            end = center + worldAxis * halfSegment;// 获取世界空间下 胶囊的结束点
         }
 
         private void OnDrawGizmos()
