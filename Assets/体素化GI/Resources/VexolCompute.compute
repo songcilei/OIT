@@ -1,0 +1,117 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+struct triangleInfo
+{
+    float3 vert1;
+    float3 vert2;
+    float3 vert3;
+    int3 index;
+};
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+StructuredBuffer<triangleInfo> trisInfo;
+
+RWTexture3D<float4> _ResultTex;
+// RWTexture2D<float4> Result;
+// float3 vertices[];
+// int triangles[];
+float3 _center;
+float3 _extents;
+float _density;
+float4x4 _local2World;
+RWTexture2D<float> _uvTex1;
+RWTexture2D<float> _uvTex2;
+RWTexture2D<float> _uvTex3;
+
+//这里是尝试直接对每个三角面建立AABB包围盒 然后通过单个三角面的AABB包围盒构建体素
+float2 boundSwnp(float2 uv1,float2 uv2,float2 uv3,RWTexture2D<float> tex)
+{
+    float Xmax = max(max(uv1.x,uv2.x),uv3.x);
+    float Xmin = min(min(uv1.x,uv2.x),uv3.x);
+    float Ymax = max(max(uv1.y,uv2.y),uv3.y);
+    float Ymin = min(min(uv1.y,uv2.y),uv3.y);
+    
+    int2 maxUV = float2(Xmax,Ymax);
+    int2 minUV = float2(Xmin,Ymin);
+    for (int i = minUV.x; i < maxUV.x; ++i)
+    {
+        for (int j = minUV.y; j < maxUV.y; ++j)
+        {
+            tex[i,j] = 1;
+        }
+    }
+}
+
+
+float3 ForwardUV(float3 vert1 ,float3 vert2,float3 vert3, float3 leftDownPos)
+{
+    float2 vert1UV = (vert1.xy - leftDownPos.xy) / (_extents.xy*2)*_density;
+    float2 vert2UV = (vert2.xy - leftDownPos.xy) / (_extents.xy*2)*_density;
+    float2 vert3UV = (vert3.xy - leftDownPos.xy) / (_extents.xy*2)*_density;
+    
+    boundSwnp(vert1UV,vert2UV,vert3UV,_uvTex1);
+}
+float3 BackwardUV(float3 vert1 ,float3 vert2,float3 vert3, float3 leftDownPos)
+{
+    float2 vert1UV = (vert1.xz - leftDownPos.xz) / (_extents.xz*2)*_density;
+    float2 vert2UV = (vert2.xz - leftDownPos.xz) / (_extents.xz*2)*_density;
+    float2 vert3UV = (vert3.xz - leftDownPos.xz) / (_extents.xz*2)*_density;
+    boundSwnp(vert1UV,vert2UV,vert3UV,_uvTex2);
+}
+float3 LeftUV(float3 vert1,float3 vert2,float3 vert3, float3 leftDownPos)
+{
+    float2 vert1UV = (vert1.zy - leftDownPos.zy) / (_extents.zy*2)*_density;
+    float2 vert2UV = (vert2.zy - leftDownPos.zy) / (_extents.zy*2)*_density;
+    float2 vert3UV = (vert3.zy - leftDownPos.zy) / (_extents.zy*2)*_density;
+    boundSwnp(vert1UV,vert2UV,vert3UV,_uvTex3);
+}
+
+
+
+// float3 Resterization(float2 uv1,float2 uv2,float2 uv3)
+// {
+//     float Xmax = max(max(uv1.x,uv2.x),uv3.x);
+//     float Xmin = min(min(uv1.x,uv2.x),uv3.x);
+//     float Ymax = max(max(uv1.y,uv2.y),uv3.y);
+//     float Ymin = min(min(uv1.y,uv2.y),uv3.y);
+//     // for (int i = Xmin; i < Xmax; ++i)
+//     // {
+//     //     for (int i = 0; i < MAX; ++i)
+//     //     {
+//     //         
+//     //     }
+//     // }
+// }
+
+
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    float3 vert1 = mul(_local2World, float4(trisInfo[id.x].vert1,1));
+    float3 vert2 = mul(_local2World, float4(trisInfo[id.x].vert2,1));
+    float3 vert3 = mul(_local2World, float4(trisInfo[id.x].vert3,1));
+    float3 leftDownPos = _center - _extents;
+    float3 upperTopPos = _center + _extents;
+    // float2 forwardUV = (vert1.xy - leftDownPos.xy) / _extents.xy*_density;
+    // float2 downUV = ()
+    ForwardUV(vert1,vert2,vert3,leftDownPos);
+    BackwardUV(vert1,vert2,vert3,leftDownPos);
+    LeftUV(vert1,vert2,vert3,leftDownPos);
+}
+
+#pragma kernel CMPVexol
+[numthreads(64,1,1)]
+void CMPVexol(uint3 id : SV_DispatchThreadID)
+{
+    // for (int x = 0; x < _density; ++x)
+    // {
+    //     for (int y = 0; y < _density; ++y)
+    //     {
+    //         for (int z = 0; z < _density; ++z)
+    //         {
+    //             _ResultTex[x,y,z] = 
+    //         }
+    //     }
+    // }
+}
