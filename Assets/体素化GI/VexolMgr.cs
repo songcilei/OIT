@@ -60,15 +60,11 @@ public class VoxelMgr : MonoBehaviour
     public void CustomResterization(Vector3 lowerLeft, Vector3 upperRight)
     {  
         List<GameObject> InterObj = new List<GameObject>();
-        //AABB求交 获取需要将哪些三角面传入软光栅进行计算
-        Bounds bound = new Bounds(
-            (upperRight-lowerLeft)/2,
-            upperRight - lowerLeft);
         var rds = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
         
         foreach (var rd in rds)
         {
-            if (bound.Intersects(rd.bounds))
+            if (_bounds.Intersects(rd.bounds))
             {
                 Debug.Log(rd.gameObject.name);
                 InterObj.Add(rd.gameObject);
