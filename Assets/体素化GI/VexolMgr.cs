@@ -9,6 +9,8 @@ public struct VoxelInfo
 {
     public Vector3 Index;
     public Vector3 Position;//世界坐标 体素 左下角的坐标
+    public Color color;
+    public Transform voxelPreviewCube;
     public int State;
 }
 [StructLayout(LayoutKind.Sequential, Pack = 4)] 
@@ -25,13 +27,16 @@ public class VoxelMgr : MonoBehaviour
 {
     private ComputeShader _CS;
     public VoxelInfo[,,] VoxelInfo;
-    private float radius = 0;
+    public bool EnableSAT = false;
+    private Vector3 radius = Vector3.one;
     private Vector3 center;
     private Vector3 expent;
     private Texture3D ResultTex;
     private int density;
     private Bounds _bounds;
-    public void Init( int Density,Vector3 low,Vector3 up)
+    private bool DebugMode;
+    
+    public void Init( int Density,Vector3 low,Vector3 up,bool enableSAT,bool enableDebugMode)
     {
         
         VoxelInfo = new VoxelInfo[Density, Density, Density];
@@ -45,13 +50,14 @@ public class VoxelMgr : MonoBehaviour
                 }
             }
         }
-        radius = (up.x - low.x) / Density;
+        radius = (up- low) / Density;
         center = (low + up) / 2;
         expent = (up - low)/2;
         density = Density;
         _bounds = new Bounds(center, expent*2);
         ResultTex = new Texture3D(Density, Density, Density, TextureFormat.RGBA32, false);
-
+        EnableSAT = enableSAT;
+        DebugMode = enableDebugMode;
     }
     
     /// <summary>
@@ -66,7 +72,7 @@ public class VoxelMgr : MonoBehaviour
         {
             if (_bounds.Intersects(rd.bounds))
             {
-                Debug.Log(rd.gameObject.name);
+                // Debug.Log(rd.gameObject.name);
                 InterObj.Add(rd.gameObject);
             }
         }
@@ -97,15 +103,38 @@ public class VoxelMgr : MonoBehaviour
                 info.index = new int3(triangles[i],triangles[i+1],triangles[i+2]);
                 trisInfo.Add(info);
             }
-
             var local2World = obj.transform.localToWorldMatrix;
             ComputeVoxelForCPU(trisInfo,obj.transform);
         }
 
+        Debug();
 
-        
     }
 
+    private void Debug()
+    {
+        if (!DebugMode)
+        {
+            return;
+        }
+        int count = 0;
+        for (int x = 0; x < VoxelInfo.GetLength(0); x++)
+        {
+            for (int y = 0; y < VoxelInfo.GetLength(1); y++)
+            {
+                for (int z = 0; z < VoxelInfo.GetLength(2); z++)
+                {
+                    if (VoxelInfo[x,y,z].State == 1)
+                    {
+                        count++;
+                    }
+                }
+            }
+        }
+
+        UnityEngine.Debug.Log("体素化网格数量:" + count);
+    }
+    
     private void ComputeVoxelForGPU(List<triangleInfo> tris,Matrix4x4 local2World)
     {
         ComputeShader cs = Resources.Load<ComputeShader>("VoxelCompute");
@@ -127,6 +156,11 @@ public class VoxelMgr : MonoBehaviour
         trisBuffer.Release();
     }
 
+    /// <summary>
+    /// CPU纯数学计算  体素生成
+    /// </summary>
+    /// <param name="tris"></param>
+    /// <param name="trans"></param>
     private void ComputeVoxelForCPU(List<triangleInfo> tris,Transform trans)
     {
         for (int i = 0; i < tris.Count; i++)
@@ -154,11 +188,20 @@ public class VoxelMgr : MonoBehaviour
                 { 
                     for (int z = triVoxelmin.z; z <= triVoxelmax.z; z++)
                     {
-                        //体素空间
                         Vector3 center =  new Vector3(x,y,z);
+                        Vector3 worldCenter = VoxelUtility.VoxelToWorld(center, _bounds, density);
+                        if (EnableSAT)
+                        {
+                            Bounds satBox = new Bounds(worldCenter+radius/2,radius);
+                            
+                            if (!VoxelUtility.TriangleBoxSAT(satBox, a, b, c))
+                            {
+                                continue;
+                            }
+                        }
                         VoxelInfo[x, y, z].State = 1;
-                        VoxelInfo[x, y, z].Position = VoxelUtility.VoxelToWorld(center, _bounds, density) ;
-          
+                        VoxelInfo[x, y, z].Position = worldCenter;
+                        
                     }
                 }
             }
@@ -168,6 +211,11 @@ public class VoxelMgr : MonoBehaviour
     private void OnDestroy()
     {
         
+    }
+
+    public VoxelInfo[,,] GetVoxelInfo()
+    {
+        return VoxelInfo;
     }
 
     private void OnDrawGizmos()
@@ -186,7 +234,7 @@ public class VoxelMgr : MonoBehaviour
                     {
                         if (VoxelInfo[x, y, z].State==1)
                         {
-                            Gizmos.DrawWireCube(VoxelInfo[x,y,z].Position+new Vector3(radius, radius, radius)/2,Vector3.one*radius);
+                            Gizmos.DrawWireCube(VoxelInfo[x,y,z].Position+radius/2,radius);
                         }
                     }
                 }

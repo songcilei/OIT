@@ -9,7 +9,8 @@ public class VoxelGenerate : EditorWindow
     private Vector3 upperRight;
     private int Density;
     private GameObject mgr;
-
+    private bool SAT = false;
+    private bool DebugMode = false;
     [MenuItem("TATool/VoxelGenerate")]
     static void VoxelGWin()
     {
@@ -23,6 +24,8 @@ public class VoxelGenerate : EditorWindow
         lowerLeft = EditorGUILayout.Vector3Field("Lower Left",lowerLeft);
         upperRight = EditorGUILayout.Vector3Field("Upper Right", upperRight);
         Density = (int)EditorGUILayout.FloatField("Density", (float)Density);
+        SAT = EditorGUILayout.Toggle("SAT", SAT);
+        DebugMode = EditorGUILayout.Toggle("Debug Mode", DebugMode);
         EditorGUILayout.Space(); 
         
         EditorGUILayout.LabelField("Main");
@@ -34,6 +37,12 @@ public class VoxelGenerate : EditorWindow
         if (GUILayout.Button("Delete Voxel"))
         {
             DeleteVoxel();
+        }
+
+
+        if (GUILayout.Button("转换gameObj => voxel"))
+        {
+            ConvertToVoxel();
         }
     }
 
@@ -54,7 +63,20 @@ public class VoxelGenerate : EditorWindow
         mgr = new GameObject();
         mgr.name = "VoxelMgr";
         var vmgr = mgr.AddComponent<VoxelMgr>();
-        vmgr.Init(Density, lowerLeft, upperRight);
+        vmgr.Init(Density, lowerLeft, upperRight,SAT,DebugMode);
         vmgr.CustomResterization(lowerLeft,upperRight);
+    }
+
+
+    private void ConvertToVoxel()
+    {
+        VoxelMgr VM = this.mgr.GetComponent<VoxelMgr>();
+        var voxelInfos = VM.GetVoxelInfo();
+        
+        VoxelIns vi = new VoxelIns();
+        vi.CreateVoxelCube(voxelInfos,lowerLeft,upperRight,Density);
+        
+        
+        
     }
 }
