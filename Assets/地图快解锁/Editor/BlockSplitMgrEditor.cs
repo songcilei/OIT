@@ -49,24 +49,26 @@ public class BlockSplitMgrEditor : Editor
 
         if (GUILayout.Button("刷新数据",GUILayout.Height(100)))
         {
-            int[] indexs = new int[states.Length];
+            // int[] indexs = new int[states.Length];
+            List<int> indexs = new List<int>();
             for (int i = 0; i < states.Length; i++)
             {
-                indexs[i] = states[i]==true?1:0;
+                if (states[i])
+                {
+                    indexs.Add(i);
+                }
             }
-            mgr.ChangeBlockState(indexs);
+            mgr.ChangeBlockState(indexs.ToArray());
             
         }
 
         if (GUILayout.Button("清空所有属性", GUILayout.Height(100)))
         {
-            int[] indexs = new int[states.Length];
             for (int i = 0; i < states.Length; i++)
             {
                 states[i] = false;
-                indexs[i] = 0;
             }
-            mgr.ChangeBlockState(indexs);
+            mgr.Clear();
         }
         
         // if (GUILayout.Button("渲染", GUILayout.Height(100)))

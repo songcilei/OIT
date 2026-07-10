@@ -26,7 +26,7 @@ public class BlockSplitMgr : MonoBehaviour
     void Init()
     {
         rt = RenderTexture.GetTemporary(RTResolution, RTResolution);
-        _blockTex = new Texture2D(resolution, resolution, TextureFormat.ARGB32, false);
+        _blockTex = new Texture2D(resolution, resolution, TextureFormat.R8, false);
         _blockTex.filterMode = FilterMode.Point;
         _blockTex.wrapMode = TextureWrapMode.Clamp;
         // _blockTex.Apply();
@@ -62,7 +62,7 @@ public class BlockSplitMgr : MonoBehaviour
     {
         for (int i = 0; i < indexs.Length; i++)
         {
-            BlockCore(i,indexs[i]);
+            BlockCore(indexs[i],1);
         }
         ApplyBlock();
         RenderMaskTex();
@@ -71,7 +71,22 @@ public class BlockSplitMgr : MonoBehaviour
     {
         _blockTex.Apply();
     }
-    
+
+    /// <summary>
+    /// 清除所有数据
+    /// </summary>
+    public void Clear()
+    {
+        Color[] pixels = new Color[resolution * resolution];
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            pixels[i] = Color.white;
+        }
+        _blockTex.SetPixels(pixels);
+        _blockTex.Apply();
+        RenderMaskTex();
+    }
+
     public void RenderMaskTex()
     {
         rt = RenderTexture.GetTemporary(RTResolution, RTResolution);
