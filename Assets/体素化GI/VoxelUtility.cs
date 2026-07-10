@@ -69,7 +69,21 @@ public static class VoxelUtility
         return worldPos;
     }
 
-
+    /// <summary>
+    /// 根据三个点求面法线
+    /// </summary>
+    /// <param name="a"></param>
+    /// <param name="b"></param>
+    /// <param name="c"></param>
+    /// <returns></returns>
+    public static Vector3 GetTriangleNormal(Vector3 a, Vector3 b, Vector3 c)
+    {
+        Vector3 edge1 = b - a;
+        Vector3 edge2 = c - a;
+        // Unity左手坐标系 Cross 直接得出面法线
+        Vector3 normal = Vector3.Cross(edge1, edge2);
+        return normal.normalized;
+    }
 
 
     public static Vector3Int Clamp(Vector3Int v,int x,int y,int z)
@@ -150,6 +164,8 @@ public static class VoxelUtility
 
         return true;
     }
+    
+    
 
     //以某个轴为投影轴来判断是否相交
     private static bool OverlapOnAxis(Vector3 v0, Vector3 v1, Vector3 v2, Vector3 halfSize, Vector3 axis)

@@ -11,6 +11,7 @@ public class VoxelGenerate : EditorWindow
     private GameObject mgr;
     private bool SAT = false;
     private bool DebugMode = false;
+    private bool DrawDebugMode = false;
     [MenuItem("TATool/VoxelGenerate")]
     static void VoxelGWin()
     {
@@ -26,6 +27,7 @@ public class VoxelGenerate : EditorWindow
         Density = (int)EditorGUILayout.FloatField("Density", (float)Density);
         SAT = EditorGUILayout.Toggle("SAT", SAT);
         DebugMode = EditorGUILayout.Toggle("Debug Mode", DebugMode);
+        DrawDebugMode = EditorGUILayout.Toggle("Draw Debug Mode", DrawDebugMode);
         EditorGUILayout.Space(); 
         
         EditorGUILayout.LabelField("Main");
@@ -55,6 +57,15 @@ public class VoxelGenerate : EditorWindow
     private void DeleteVoxel()
     {
         GameObject.DestroyImmediate(mgr);
+        if (GameObject.Find("VoxelMgr"))
+        {
+            GameObject.DestroyImmediate(GameObject.Find("VoxelMgr"));
+        }
+        if (GameObject.Find("VoxelRoot"))
+        {
+            GameObject.DestroyImmediate(GameObject.Find("VoxelRoot"));            
+        }
+
     }
     
 
@@ -63,7 +74,7 @@ public class VoxelGenerate : EditorWindow
         mgr = new GameObject();
         mgr.name = "VoxelMgr";
         var vmgr = mgr.AddComponent<VoxelMgr>();
-        vmgr.Init(Density, lowerLeft, upperRight,SAT,DebugMode);
+        vmgr.Init(Density, lowerLeft, upperRight,SAT,DebugMode,DrawDebugMode);
         vmgr.CustomResterization(lowerLeft,upperRight);
     }
 

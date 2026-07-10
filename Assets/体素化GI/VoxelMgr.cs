@@ -8,8 +8,9 @@ using UnityEngine;
 public struct VoxelInfo
 {
     public Vector3 Index;
-    public Vector3 Position;//世界坐标 体素 左下角的坐标
+    public Vector4 Position;//世界坐标 体素 左下角的坐标
     public Color color;
+    public List<Vector4> normals;
     public Transform voxelPreviewCube;
     public int State;
 }
@@ -22,7 +23,7 @@ public struct triangleInfo//48 bytes
     public int3 index;
 }
 
-
+  
 public class VoxelMgr : MonoBehaviour
 {
     private ComputeShader _CS;
@@ -35,10 +36,10 @@ public class VoxelMgr : MonoBehaviour
     private int density;
     private Bounds _bounds;
     private bool DebugMode;
-    
-    public void Init( int Density,Vector3 low,Vector3 up,bool enableSAT,bool enableDebugMode)
+    private bool DrawDebugMode;
+    public void Init( int Density,Vector3 low,Vector3 up,bool enableSAT,bool enableDebugMode,bool enableDrawDebug)
     {
-        
+        // 初始化体素信息
         VoxelInfo = new VoxelInfo[Density, Density, Density];
         for (int x = 0; x < VoxelInfo.GetLength(0); x++)
         {
@@ -47,6 +48,7 @@ public class VoxelMgr : MonoBehaviour
                 for (int z = 0; z < VoxelInfo.GetLength(2); z++)
                 {
                     VoxelInfo[x, y, z].State = 0;
+                    VoxelInfo[x, y, z].normals = new List<Vector4>();
                 }
             }
         }
@@ -58,6 +60,7 @@ public class VoxelMgr : MonoBehaviour
         ResultTex = new Texture3D(Density, Density, Density, TextureFormat.RGBA32, false);
         EnableSAT = enableSAT;
         DebugMode = enableDebugMode;
+        DrawDebugMode = enableDrawDebug;
     }
     
     /// <summary>
@@ -201,7 +204,7 @@ public class VoxelMgr : MonoBehaviour
                         }
                         VoxelInfo[x, y, z].State = 1;
                         VoxelInfo[x, y, z].Position = worldCenter;
-                        
+                        VoxelInfo[x, y, z].normals.Add(VoxelUtility.GetTriangleNormal(a,b,c));
                     }
                 }
             }
@@ -222,24 +225,27 @@ public class VoxelMgr : MonoBehaviour
     {
         Gizmos.color = Color.green;
         Gizmos.DrawWireCube(_bounds.center,_bounds.extents*2);
-        
-        Gizmos.color = Color.red;
-        if (VoxelInfo!=null && VoxelInfo.Length>1)  
+
+        if (DrawDebugMode)
         {
-            for (int x = 0; x < VoxelInfo.GetLength(0); x++)
+            Gizmos.color = Color.red;
+            if (VoxelInfo!=null && VoxelInfo.Length>1)  
             {
-                for (int y = 0; y < VoxelInfo.GetLength(1); y++)
+                for (int x = 0; x < VoxelInfo.GetLength(0); x++)
                 {
-                    for (int z = 0; z < VoxelInfo.GetLength(2); z++)
+                    for (int y = 0; y < VoxelInfo.GetLength(1); y++)
                     {
-                        if (VoxelInfo[x, y, z].State==1)
+                        for (int z = 0; z < VoxelInfo.GetLength(2); z++)
                         {
-                            Gizmos.DrawWireCube(VoxelInfo[x,y,z].Position+radius/2,radius);
+                            if (VoxelInfo[x, y, z].State==1)
+                            {
+                                Gizmos.DrawWireCube((Vector3)VoxelInfo[x,y,z].Position+radius/2,radius);
+                            }
                         }
                     }
                 }
-            }
         
+            }
         }
     }
 }
