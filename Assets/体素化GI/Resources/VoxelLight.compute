@@ -38,6 +38,7 @@ void CSMainT (uint3 id : SV_DispatchThreadID)
     // }
     
     LIGHT_LOOP_END
+    diffuse-=1;
     _voxelColors[id.x] = float4(diffuse,1);
     
 }
