@@ -96,7 +96,7 @@ public class BlockSplitMgr : MonoBehaviour
         cb.ClearRenderTarget(true,true,Color.clear);
         var view = Matrix4x4.TRS(
             new Vector3(0,-1,0),
-            Quaternion.Euler(new Vector3(90,0,0)),
+            Quaternion.Euler(new Vector3(90,180,0)),
             Vector3.one
         ).inverse;
         var proj = Matrix4x4.Ortho(-1, 1, -1, 1, 0.1f, 100f);

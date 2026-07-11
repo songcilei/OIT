@@ -15,7 +15,7 @@ Shader "Unlit/VoxelCubeShader"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-
+            #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         
@@ -24,6 +24,7 @@ Shader "Unlit/VoxelCubeShader"
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
                 float3 normal:NORMAL;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct v2f
@@ -31,6 +32,7 @@ Shader "Unlit/VoxelCubeShader"
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
                 float3 normal:NORMAL;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             sampler2D _MainTex;

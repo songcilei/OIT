@@ -12,6 +12,7 @@ public struct VoxelInfo
     public Vector4 Position;//世界坐标 体素 左下角的坐标
     public Color color;
     public List<Vector4> normals;
+    public int atten;
     public Transform voxelPreviewCube;
     public int State;
 }
@@ -38,7 +39,8 @@ public class VoxelMgr : MonoBehaviour
     private Bounds _bounds;
     private bool DebugMode;
     private bool DrawDebugMode;
-    public void Init( int Density,Vector3 low,Vector3 up,bool enableSAT,bool enableDebugMode,bool enableDrawDebug)
+    private Light mainLight;
+    public void Init( int Density,Vector3 low,Vector3 up,bool enableSAT,Light light,bool enableDebugMode,bool enableDrawDebug)
     {
         // 初始化体素信息
         VoxelInfo = new VoxelInfo[Density, Density, Density];
@@ -52,6 +54,7 @@ public class VoxelMgr : MonoBehaviour
                     VoxelInfo[x, y, z].normals = new List<Vector4>();
                     VoxelInfo[x, y, z].Index = new Vector3(x, y, z);
                     VoxelInfo[x, y, z].color = Color.black;
+                    VoxelInfo[x, y, z].atten = 1;
                 }
             }
         }
@@ -64,6 +67,7 @@ public class VoxelMgr : MonoBehaviour
         EnableSAT = enableSAT;
         DebugMode = enableDebugMode;
         DrawDebugMode = enableDrawDebug;
+        mainLight = light;
     }
     
     /// <summary>
@@ -79,7 +83,10 @@ public class VoxelMgr : MonoBehaviour
             if (_bounds.Intersects(rd.bounds))
             {
                 // Debug.Log(rd.gameObject.name);
-                InterObj.Add(rd.gameObject);
+                if (!rd.gameObject.name.Contains("Dynamic"))
+                {
+                    InterObj.Add(rd.gameObject);
+                }
             }
         }
 
@@ -97,6 +104,22 @@ public class VoxelMgr : MonoBehaviour
             Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
             var vertices = mesh.vertices;
             var triangles = mesh.triangles;
+            
+            //获取材质上的主要颜色  Material Color  必要的话还需要获取贴图颜色 但这里暂时不考虑这么复杂
+            var mat = obj.GetComponent<Renderer>().sharedMaterial;
+            Color MainCol = Color.white;
+            if (mat.HasProperty("_BaseColor"))
+            {
+                MainCol = mat.GetColor("_BaseColor");
+            }else if (mat.HasProperty("_Color"))
+            {
+                MainCol = mat.GetColor("_Color");
+            }else if (mat.HasProperty("_MainColor"))
+            {
+                MainCol = mat.GetColor("_MainColor");
+            }
+            
+            
             //对每个单独的物体执行cm计算
             for (int i = 0; i < triangles.Length; i+=3)
             {
@@ -108,7 +131,7 @@ public class VoxelMgr : MonoBehaviour
                 trisInfo.Add(info);
             }
             var local2World = obj.transform.localToWorldMatrix;
-            ComputeVoxelForCPU(trisInfo,obj.transform);
+            ComputeVoxelForCPU(trisInfo,obj.transform, MainCol);
         }
 
         Debug();
@@ -165,7 +188,7 @@ public class VoxelMgr : MonoBehaviour
     /// </summary>
     /// <param name="tris"></param>
     /// <param name="trans"></param>
-    private void ComputeVoxelForCPU(List<triangleInfo> tris,Transform trans)
+    private void ComputeVoxelForCPU(List<triangleInfo> tris,Transform trans,Color mainColor)
     {
         List<VoxelInfo> InterVoxelInfo = new List<VoxelInfo>();
         for (int i = 0; i < tris.Count; i++)
@@ -208,19 +231,24 @@ public class VoxelMgr : MonoBehaviour
                         VoxelInfo[x, y, z].State = 1;
                         VoxelInfo[x, y, z].Position = worldCenter;
                         VoxelInfo[x, y, z].normals.Add(VoxelUtility.GetTriangleNormal(a,b,c));
+                        //计算光照阴影
+                        VoxelInfo[x, y, z].atten = ComputeAtten(VoxelInfo[x, y, z],mainLight,x,y,z);
                         InterVoxelInfo.Add(VoxelInfo[x,y,z]);
                     }
                 }
             }
         }
+        
 
         //计算光照颜色
-        var Cols = ComputeShading(InterVoxelInfo);
+        var Cols = ComputeShading(InterVoxelInfo,mainColor);
         for (int i = 0; i < InterVoxelInfo.Count; i++)
         {
             Vector3 index = InterVoxelInfo[i].Index;
             VoxelInfo[(int)index.x, (int)index.y, (int)index.z].color = Cols[i];
         }
+
+
 
     }
 
@@ -255,7 +283,7 @@ public class VoxelMgr : MonoBehaviour
     /// </summary>
     /// <param name="voxelCubes"></param>
     /// <returns></returns>
-    public Vector4[] ComputeShading( List<VoxelInfo> voxelCubes)
+    public Vector4[] ComputeShading( List<VoxelInfo> voxelCubes,Color mainColor)
     {
                 
 //compute Cube Color
@@ -267,13 +295,17 @@ public class VoxelMgr : MonoBehaviour
         int kernelHandle = CS.FindKernel("CSMainT");
         List<Vector4> positions = new List<Vector4>();
         List<Vector4> BendNormal = new List<Vector4>();
+        List<int> attens = new List<int>();
         ComputeBuffer resultBuff = new ComputeBuffer(voxelCubes.Count, 16);
+        ComputeBuffer attensBuff = new ComputeBuffer(voxelCubes.Count, 4);
         ComputeBuffer positionsBuff = new ComputeBuffer(voxelCubes.Count, 16);
         ComputeBuffer normalsBuff = new ComputeBuffer(voxelCubes.Count, 16);
         //compute position / normal 
         foreach (var voxel in voxelCubes)
         {
             positions.Add(voxel.Position);
+            attens.Add(voxel.atten);
+
             Vector4 normalAdd = Vector3.zero;
             foreach (var normal in voxel.normals)
             {
@@ -281,14 +313,20 @@ public class VoxelMgr : MonoBehaviour
             }
             BendNormal.Add(normalAdd/voxel.normals.Count);
         }
+
+
         
         positionsBuff.SetData(positions);
         normalsBuff.SetData(BendNormal);
+        attensBuff.SetData(attens);
+        
         // CS.SetVectorArray("_voxelPositions",positions.ToArray());
         // CS.SetVectorArray("_voxelNormals",BendNormal.ToArray());
         CS.SetBuffer(kernelHandle,"_voxelColors",resultBuff);
         CS.SetBuffer(kernelHandle,"_voxelPositions",positionsBuff);
         CS.SetBuffer(kernelHandle,"_voxelNormals",normalsBuff);
+        CS.SetBuffer(kernelHandle,"_voxelAtten",attensBuff);
+        CS.SetVector("_MainColor",mainColor);
         CS.GetKernelThreadGroupSizes(kernelHandle, out uint Tx, out uint Ty, out uint Tz);
         CS.Dispatch(kernelHandle, positions.Count/(int)Tx,1,1);
         // CS.SetBuffer(); +
@@ -298,8 +336,41 @@ public class VoxelMgr : MonoBehaviour
         resultBuff.Release();
         positionsBuff.Release();
         normalsBuff.Release();
+        attensBuff.Release();
         return Cols;
     }
+
+    private List<Vector3> orpos = new List<Vector3>();
+    private List<Vector3> ddirs = new List<Vector3>();
+    private List<Vector3> points = new List<Vector3>();
+    /// <summary>
+    /// 计算阴影
+    /// </summary>
+    /// <returns></returns>
+    public int ComputeAtten(VoxelInfo voxel,Light light,int x ,int y ,int z)
+    {
+        if (light==null)
+        {
+            return 1;
+        }
+
+
+        Vector3 oriPos = (Vector3)voxel.Position + radius / 2;
+        Vector3 dir =  -light.transform.forward;
+        RaycastHit hit;
+        Ray ray = new Ray(oriPos, dir);
+        if (Physics.Raycast(ray, out hit, 500))
+        {
+            points.Add(hit.point);
+            orpos.Add(oriPos);
+            ddirs.Add(dir);
+            return 0;
+        }
+
+        return 1;
+
+    }
+
 
     public VoxelInfo[,,] GetVoxelInfo()
     {
@@ -331,6 +402,21 @@ public class VoxelMgr : MonoBehaviour
                 }
         
             }
+            Gizmos.color = Color.yellow;
+            for (int i = 0; i < orpos.Count; i++)
+            {
+                // Gizmos.DrawLine(orpos[i],orpos[i]+ddirs[i]*100);
+                Gizmos.DrawSphere(points[i],4);
+            }
+            
+            // Gizmos.color = Color.blue;
+            // for (int i = 0; i < orpos.Count; i++)
+            // {
+            //     // Gizmos.DrawLine(orpos[i],orpos[i]+ddirs[i]*100);
+            //     Gizmos.DrawSphere(orpos[i],4);
+            // }
         }
+
+ 
     }
 }

@@ -40,6 +40,7 @@ Shader "Unlit/VoxelGIShader"
                 float4 color:COLOR;
                 UNITY_FOG_COORDS(1)
                 float4 vertex : SV_POSITION;
+                float3 worldPos:TEXCOORD1;
             };
 
             sampler2D _MainTex;
@@ -55,20 +56,50 @@ Shader "Unlit/VoxelGIShader"
             int _TrackMaxCount;
             float _TrackThreshold;
             
+            ///求法向量 构建垂直正交基 后  求法向量和各个象限均分向量  
+            void GetNormalFourSlopeDir(float3 normal, out float3 lu, out float3 ru, out float3 ld, out float3 rd)
+            {
+                float3 temp = abs(normal.y) < 0.99f ? float3(0,1,0) : float3(0,0,1);
+                float3 tan = normalize(cross(temp, normal));
+                float3 bi = normalize(cross(normal, tan));
+
+                
+                
+                lu = normalize(-tan + bi+ normal);
+                ru = normalize(tan + bi+ normal);
+                ld = normalize(-tan - bi+ normal);
+                rd = normalize(tan - bi+ normal);
+            }
+            
             float3 GetVoxelGI(float3 worldPos,float3 N)
             {
                 //voxel
                 float3 voxelUV = (worldPos - _lowAABB.xyz)/(_highAABB.xyz - _lowAABB.xyz);//从世界坐标映射到3D纹理坐标系
                 float step = 1.0f/_VoxelTex_TexelSize.z;//获取到单次步长
                 float3 detalColor = 0;
-                float3 detailUV = 0;
+                float3 detailUV_lu,detailUV_ru,detailUV_ld,detailUV_rd = 0;
+                float3 lu,ru,ld,rd;
+                GetNormalFourSlopeDir(N,lu,ru,ld,rd);
                 for (int i = 0; i < _TrackMaxCount; ++i)
                 {
-                    detailUV += normalize(N)*step * pow(2,i)*_TrackThreshold; // 这里是在法线方向上移动步长，进行追踪
-                    float3 RayUV = voxelUV + detailUV;
-                    detalColor += tex3Dlod(_VoxelTex,float4(RayUV,i)).rgb;//这里采用的是 密集体素 + mipmap 的追踪的方法
+                    detailUV_lu += normalize(lu)*step * pow(2,i)*_TrackThreshold; // 这里是在法线方向上移动步长，进行追踪
+
+                    float3 RayUV_lu = voxelUV + detailUV_lu;
+                    detalColor += tex3Dlod(_VoxelTex,float4(RayUV_lu,i)).rgb;//这里采用的是 密集体素 + mipmap 的追踪的方法
+                    
+                    detailUV_ru += normalize(ru)*step * pow(2,i)*_TrackThreshold; // 这里是在法线方向上移动步长，进行追踪
+                    float3 RayUV_ru = voxelUV + detailUV_ru;
+                    detalColor += tex3Dlod(_VoxelTex,float4(RayUV_ru,i)).rgb;//这里采用的是 密集体素 + mipmap 的追踪的方法
+                    
+                    detailUV_ld += normalize(ld)*step * pow(2,i)*_TrackThreshold; // 这里是在法线方向上移动步长，进行追踪
+                    float3 RayUV_ld = voxelUV + detailUV_ld;
+                    detalColor += tex3Dlod(_VoxelTex,float4(RayUV_ld,i)).rgb;//这里采用的是 密集体素 + mipmap 的追踪的方法
+                    
+                    detailUV_rd += normalize(rd)*step * pow(2,i)*_TrackThreshold; // 这里是在法线方向上移动步长，进行追踪
+                    float3 RayUV_rd = voxelUV + detailUV_rd;
+                    detalColor += tex3Dlod(_VoxelTex,float4(RayUV_rd,i)).rgb;//这里采用的是 密集体素 + mipmap 的追踪的方法
                 }
-                detalColor/=_TrackMaxCount;
+                // detalColor/=4;
                 return detalColor;
             }
 //Voxel  GI
@@ -78,10 +109,10 @@ Shader "Unlit/VoxelGIShader"
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 float3 N = mul(v.normal,(float3x3)unity_WorldToObject);
-                o.normal = N;
+                o.normal = normalize(N);
                 float3 worldPos = mul(unity_ObjectToWorld,v.vertex).xyz;
-                o.color.rgb = GetVoxelGI(worldPos,N);
-                
+                o.worldPos = worldPos;
+                o.color.rgb = GetVoxelGI(worldPos,normalize(o.normal));
                 return o;
             }
             
@@ -89,7 +120,7 @@ Shader "Unlit/VoxelGIShader"
 
             fixed4 frag (v2f i) : SV_Target
             {
-                
+                // float3 gi = GetVoxelGI(i.worldPos,normalize(i.normal));
                 
                 fixed4 col = tex2D(_MainTex, i.uv);
                 

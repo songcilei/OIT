@@ -6,6 +6,8 @@
 // RWTexture2D<float4> Result;
 StructuredBuffer<float4> _voxelPositions;
 StructuredBuffer<float4> _voxelNormals;
+StructuredBuffer<int> _voxelAtten;
+float4 _MainColor;
 RWBuffer<float4> _voxelColors;
 [numthreads(1,1,1)]
 void CSMainT (uint3 id : SV_DispatchThreadID)
@@ -15,11 +17,11 @@ void CSMainT (uint3 id : SV_DispatchThreadID)
     float3 L = normalize(_MainLightPosition);
     float3 N = normalize(_voxelNormals[id.x]);
     float3 worldPos = _voxelPositions[id.x];
-    half3 diffuse = saturate(dot(N,L));
+    half3 diffuse = saturate(dot(N,L))*_voxelAtten[id.x]*_MainColor;
+   
 // ambient
-    float3 ambinet = SampleSH(N);    
-    diffuse += ambinet*0.5;
-    
+    float3 ambinet = pow(SampleSH(N),1/2.2f);    
+    diffuse += ambinet*_MainColor;
 //add light
     uint lightsCount = GetAdditionalLightsCount();
     uint meshRenderingLayers = GetMeshRenderingLayer();

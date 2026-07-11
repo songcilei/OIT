@@ -37,6 +37,7 @@ public class VoxelIns
     public void SetPerVoxel(int x,int y,int z,VoxelInfo[,,] voxelInfos,Material cubeMat)
     {
         var voxel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        GameObject.DestroyImmediate(voxel.GetComponent<Collider>());
         voxel.transform.position = (Vector3)voxelInfos[x,y,z].Position+radius/2;
         voxel.transform.localScale = radius;
         voxel.transform.SetParent(root.transform);

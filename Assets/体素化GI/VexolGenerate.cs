@@ -12,6 +12,7 @@ public class VoxelGenerate : EditorWindow
     private bool SAT = false;
     private bool DebugMode = false;
     private bool DrawDebugMode = false;
+    private Light MainLight;
     [MenuItem("TATool/VoxelGenerate")]
     static void VoxelGWin()
     {
@@ -22,6 +23,7 @@ public class VoxelGenerate : EditorWindow
     private void OnGUI()
     {
         EditorGUILayout.LabelField("Voxel Range",EditorStyles.boldLabel);
+        MainLight = EditorGUILayout.ObjectField(MainLight, typeof(Light), true) as Light ;
         lowerLeft = EditorGUILayout.Vector3Field("Lower Left",lowerLeft);
         upperRight = EditorGUILayout.Vector3Field("Upper Right", upperRight);
         Density = (int)EditorGUILayout.FloatField("Density", (float)Density);
@@ -79,7 +81,7 @@ public class VoxelGenerate : EditorWindow
         mgr = new GameObject();
         mgr.name = "VoxelMgr";
         var vmgr = mgr.AddComponent<VoxelMgr>();
-        vmgr.Init(Density, lowerLeft, upperRight,SAT,DebugMode,DrawDebugMode);
+        vmgr.Init(Density, lowerLeft, upperRight,SAT,MainLight,DebugMode,DrawDebugMode);
         vmgr.CreateVoxel(lowerLeft,upperRight);
     }
 
