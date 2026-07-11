@@ -39,8 +39,9 @@ public class VoxelMgr : MonoBehaviour
     private Bounds _bounds;
     private bool DebugMode;
     private bool DrawDebugMode;
+    private bool DrawDebugShadowPoint;
     private Light mainLight;
-    public void Init( int Density,Vector3 low,Vector3 up,bool enableSAT,Light light,bool enableDebugMode,bool enableDrawDebug)
+    public void Init( int Density,Vector3 low,Vector3 up,bool enableSAT,Light light,bool enableDebugMode,bool enableDrawDebug,bool enableDrawDebugShadowPoint)
     {
         // 初始化体素信息
         VoxelInfo = new VoxelInfo[Density, Density, Density];
@@ -67,6 +68,7 @@ public class VoxelMgr : MonoBehaviour
         EnableSAT = enableSAT;
         DebugMode = enableDebugMode;
         DrawDebugMode = enableDrawDebug;
+        DrawDebugShadowPoint = enableDrawDebugShadowPoint;
         mainLight = light;
     }
     
@@ -252,7 +254,7 @@ public class VoxelMgr : MonoBehaviour
 
     }
 
-    public void CreateTex3D(string path)
+    public string CreateTex3D(string path)
     {
         // int tex3Size = density * density * density;
         Texture3D tex3D = new Texture3D(density,density,density,TextureFormat.ARGB32,true);
@@ -273,7 +275,7 @@ public class VoxelMgr : MonoBehaviour
 
         string assetPath = path + "/VoxelTex3D.asset";
         AssetDatabase.CreateAsset(tex3D,assetPath);
-        
+        return assetPath;
     }
     
     
@@ -402,12 +404,17 @@ public class VoxelMgr : MonoBehaviour
                 }
         
             }
-            Gizmos.color = Color.yellow;
-            for (int i = 0; i < orpos.Count; i++)
+
+            if (DrawDebugShadowPoint)
             {
-                // Gizmos.DrawLine(orpos[i],orpos[i]+ddirs[i]*100);
-                Gizmos.DrawSphere(points[i],4);
+                Gizmos.color = Color.yellow;
+                for (int i = 0; i < orpos.Count; i++)
+                {
+                    // Gizmos.DrawLine(orpos[i],orpos[i]+ddirs[i]*100);
+                    Gizmos.DrawSphere(points[i],4);
+                }
             }
+
             
             // Gizmos.color = Color.blue;
             // for (int i = 0; i < orpos.Count; i++)

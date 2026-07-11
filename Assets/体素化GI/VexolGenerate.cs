@@ -12,7 +12,9 @@ public class VoxelGenerate : EditorWindow
     private bool SAT = false;
     private bool DebugMode = false;
     private bool DrawDebugMode = false;
+    private bool DrawDebugShadowPoint = false;
     private Light MainLight;
+    private Material targetMat;
     [MenuItem("TATool/VoxelGenerate")]
     static void VoxelGWin()
     {
@@ -27,9 +29,11 @@ public class VoxelGenerate : EditorWindow
         lowerLeft = EditorGUILayout.Vector3Field("Lower Left",lowerLeft);
         upperRight = EditorGUILayout.Vector3Field("Upper Right", upperRight);
         Density = (int)EditorGUILayout.FloatField("Density", (float)Density);
+        targetMat = EditorGUILayout.ObjectField(targetMat, typeof(Material), true) as Material;
         SAT = EditorGUILayout.Toggle("SAT", SAT);
         DebugMode = EditorGUILayout.Toggle("Debug Mode", DebugMode);
         DrawDebugMode = EditorGUILayout.Toggle("Draw Debug Mode", DrawDebugMode);
+        DrawDebugShadowPoint = EditorGUILayout.Toggle("Draw Debug Shadow Point", DrawDebugShadowPoint);
         EditorGUILayout.Space(); 
         
         EditorGUILayout.LabelField("Main");
@@ -49,7 +53,7 @@ public class VoxelGenerate : EditorWindow
             ConvertToVoxel();
         }
 
-        if (GUILayout.Button("创建 3Dtex 资产"))
+        if (GUILayout.Button("启用体素GI模式"))
         {
             Create3DTex();
         }
@@ -81,15 +85,17 @@ public class VoxelGenerate : EditorWindow
         mgr = new GameObject();
         mgr.name = "VoxelMgr";
         var vmgr = mgr.AddComponent<VoxelMgr>();
-        vmgr.Init(Density, lowerLeft, upperRight,SAT,MainLight,DebugMode,DrawDebugMode);
+        vmgr.Init(Density, lowerLeft, upperRight,SAT,MainLight,DebugMode,DrawDebugMode,DrawDebugShadowPoint);
         vmgr.CreateVoxel(lowerLeft,upperRight);
     }
 
     private void Create3DTex()
     {
         var vmgr = this.mgr.GetComponent<VoxelMgr>();
-        vmgr.CreateTex3D("Assets/体素化GI/");
+        string path = vmgr.CreateTex3D("Assets/体素化GI/");
         AssetDatabase.Refresh();
+        var tex3D = AssetDatabase.LoadAssetAtPath<Texture3D>(path);
+        targetMat.SetTexture("_VoxelTex",tex3D);
     }
 
 
