@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Unity.Mathematics;
+using UnityEditor;
 using UnityEngine;
 
 public struct VoxelInfo
@@ -49,6 +50,8 @@ public class VoxelMgr : MonoBehaviour
                 {
                     VoxelInfo[x, y, z].State = 0;
                     VoxelInfo[x, y, z].normals = new List<Vector4>();
+                    VoxelInfo[x, y, z].Index = new Vector3(x, y, z);
+                    VoxelInfo[x, y, z].color = Color.black;
                 }
             }
         }
@@ -64,9 +67,9 @@ public class VoxelMgr : MonoBehaviour
     }
     
     /// <summary>
-    /// 自定义光栅化   原因是直接拍三视图  精度很差 需要逐三角面处理  除了这个还有射线法  但量大了求交也是很复杂的过程
+    /// 创建紧凑型体素网络
     /// </summary>
-    public void CustomResterization(Vector3 lowerLeft, Vector3 upperRight)
+    public void CreateVoxel(Vector3 lowerLeft, Vector3 upperRight)
     {  
         List<GameObject> InterObj = new List<GameObject>();
         var rds = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
@@ -84,11 +87,9 @@ public class VoxelMgr : MonoBehaviour
 //CS 计算Voxel 信息 / CPU  计算Voxel 信息
         GetMeshsInfo(InterObj);
     }
-
     
     public void GetMeshsInfo(List<GameObject> objs)
     {
-
         List<triangleInfo> trisInfo;
         foreach (var obj in objs)//遍历所有对象
         {
@@ -166,6 +167,7 @@ public class VoxelMgr : MonoBehaviour
     /// <param name="trans"></param>
     private void ComputeVoxelForCPU(List<triangleInfo> tris,Transform trans)
     {
+        List<VoxelInfo> InterVoxelInfo = new List<VoxelInfo>();
         for (int i = 0; i < tris.Count; i++)
         {
             //顶点转世界坐标
@@ -193,6 +195,7 @@ public class VoxelMgr : MonoBehaviour
                     {
                         Vector3 center =  new Vector3(x,y,z);
                         Vector3 worldCenter = VoxelUtility.VoxelToWorld(center, _bounds, density);
+
                         if (EnableSAT)
                         {
                             Bounds satBox = new Bounds(worldCenter+radius/2,radius);
@@ -205,15 +208,97 @@ public class VoxelMgr : MonoBehaviour
                         VoxelInfo[x, y, z].State = 1;
                         VoxelInfo[x, y, z].Position = worldCenter;
                         VoxelInfo[x, y, z].normals.Add(VoxelUtility.GetTriangleNormal(a,b,c));
+                        InterVoxelInfo.Add(VoxelInfo[x,y,z]);
                     }
                 }
             }
         }
+
+        //计算光照颜色
+        var Cols = ComputeShading(InterVoxelInfo);
+        for (int i = 0; i < InterVoxelInfo.Count; i++)
+        {
+            Vector3 index = InterVoxelInfo[i].Index;
+            VoxelInfo[(int)index.x, (int)index.y, (int)index.z].color = Cols[i];
+        }
+
     }
 
-    private void OnDestroy()
+    public void CreateTex3D(string path)
     {
+        // int tex3Size = density * density * density;
+        Texture3D tex3D = new Texture3D(density,density,density,TextureFormat.ARGB32,true);
+        for (int x = 0; x < tex3D.width; x++)
+        {
+            for (int y = 0; y < tex3D.height; y++)
+            {
+                for (int z = 0; z < tex3D.depth; z++)
+                {
+                    tex3D.SetPixel(x,y,z,VoxelInfo[x,y,z].color);
+                }
+            }
+        }
+        tex3D.Apply();
+        tex3D.wrapMode = TextureWrapMode.Clamp;
+        tex3D.filterMode = FilterMode.Bilinear;
+        tex3D.name = "VoxelTex3D";
+
+        string assetPath = path + "/VoxelTex3D.asset";
+        AssetDatabase.CreateAsset(tex3D,assetPath);
         
+    }
+    
+    
+
+    /// <summary>
+    /// 计算光照信息
+    /// </summary>
+    /// <param name="voxelCubes"></param>
+    /// <returns></returns>
+    public Vector4[] ComputeShading( List<VoxelInfo> voxelCubes)
+    {
+                
+//compute Cube Color
+        ComputeShader CS = Resources.Load<ComputeShader>("VoxelLight");
+        if (CS==null)
+        {
+            UnityEngine.Debug.LogError("没有找到CS文件");
+        }
+        int kernelHandle = CS.FindKernel("CSMainT");
+        List<Vector4> positions = new List<Vector4>();
+        List<Vector4> BendNormal = new List<Vector4>();
+        ComputeBuffer resultBuff = new ComputeBuffer(voxelCubes.Count, 16);
+        ComputeBuffer positionsBuff = new ComputeBuffer(voxelCubes.Count, 16);
+        ComputeBuffer normalsBuff = new ComputeBuffer(voxelCubes.Count, 16);
+        //compute position / normal 
+        foreach (var voxel in voxelCubes)
+        {
+            positions.Add(voxel.Position);
+            Vector4 normalAdd = Vector3.zero;
+            foreach (var normal in voxel.normals)
+            {
+                normalAdd += normal;
+            }
+            BendNormal.Add(normalAdd/voxel.normals.Count);
+        }
+        
+        positionsBuff.SetData(positions);
+        normalsBuff.SetData(BendNormal);
+        // CS.SetVectorArray("_voxelPositions",positions.ToArray());
+        // CS.SetVectorArray("_voxelNormals",BendNormal.ToArray());
+        CS.SetBuffer(kernelHandle,"_voxelColors",resultBuff);
+        CS.SetBuffer(kernelHandle,"_voxelPositions",positionsBuff);
+        CS.SetBuffer(kernelHandle,"_voxelNormals",normalsBuff);
+        CS.GetKernelThreadGroupSizes(kernelHandle, out uint Tx, out uint Ty, out uint Tz);
+        CS.Dispatch(kernelHandle, positions.Count/(int)Tx,1,1);
+        // CS.SetBuffer(); +
+        
+        Vector4[] Cols = new Vector4[voxelCubes.Count];
+        resultBuff.GetData(Cols);
+        resultBuff.Release();
+        positionsBuff.Release();
+        normalsBuff.Release();
+        return Cols;
     }
 
     public VoxelInfo[,,] GetVoxelInfo()

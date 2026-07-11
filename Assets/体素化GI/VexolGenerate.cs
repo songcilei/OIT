@@ -46,6 +46,11 @@ public class VoxelGenerate : EditorWindow
         {
             ConvertToVoxel();
         }
+
+        if (GUILayout.Button("创建 3Dtex 资产"))
+        {
+            Create3DTex();
+        }
     }
 
     private void CreateVoxel()
@@ -75,7 +80,14 @@ public class VoxelGenerate : EditorWindow
         mgr.name = "VoxelMgr";
         var vmgr = mgr.AddComponent<VoxelMgr>();
         vmgr.Init(Density, lowerLeft, upperRight,SAT,DebugMode,DrawDebugMode);
-        vmgr.CustomResterization(lowerLeft,upperRight);
+        vmgr.CreateVoxel(lowerLeft,upperRight);
+    }
+
+    private void Create3DTex()
+    {
+        var vmgr = this.mgr.GetComponent<VoxelMgr>();
+        vmgr.CreateTex3D("Assets/体素化GI/");
+        AssetDatabase.Refresh();
     }
 
 
