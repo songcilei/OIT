@@ -62,10 +62,9 @@ public static class VoxelUtility
     /// <param name="OriginBound"></param>
     /// <param name="VoxelSize"></param>
     /// <returns></returns>
-    public static Vector3 VoxelToWorld(Vector3 voxel,Bounds OriginBound,float VoxelSize)
+    public static Vector3 VoxelToWorld(Vector3 voxel,Vector3 boundSize,Vector3 boundMin,float VoxelSize)
     {
-        Vector3 range = OriginBound.max - OriginBound.min;
-        Vector3 worldPos = OriginBound.min + new Vector3(voxel.x / VoxelSize* range.x, voxel.y / VoxelSize* range.y, voxel.z / VoxelSize* range.z) ;
+        Vector3 worldPos = boundMin + new Vector3(voxel.x / VoxelSize* boundSize.x, voxel.y / VoxelSize* boundSize.y, voxel.z / VoxelSize* boundSize.z) ;
         return worldPos;
     }
 
