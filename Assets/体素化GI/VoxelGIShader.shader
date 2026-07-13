@@ -91,25 +91,34 @@ Shader "Unlit/VoxelGIShader"
                 float3 voxelUV = (worldPos - _lowAABB.xyz)/(_highAABB.xyz - _lowAABB.xyz);//从世界坐标映射到3D纹理坐标系
                 float step = 1.0f/_VoxelTex_TexelSize.z;//获取到单次步长
                 float3 detalColor = 0;
-                float3 detailUV_lu,detailUV_ru,detailUV_ld,detailUV_rd = 0;
+                float3 detailUV_N,detailUV_lu,detailUV_ru,detailUV_ld,detailUV_rd = 0;
                 float3 lu,ru,ld,rd;
                 GetNormalFourSlopeDir(N,lu,ru,ld,rd);
                 for (int i = 0; i < _TrackMaxCount; ++i)
                 {
-                    detailUV_lu += normalize(lu)*step * pow(2,i)*_TrackThreshold; // 这里是在法线方向上移动步长，进行追踪
-
+                    float3 NstepDir = N * step;
+                    detailUV_N += NstepDir * pow(2,i)*_TrackThreshold + NstepDir;
+                    float3 RayUV_N = voxelUV + detailUV_N;
+                    detalColor += tex3Dlod(_VoxelTex,float4(RayUV_N,i)).rgb;
+                    
+                    
+                    float3 LUstepDir = normalize(lu)*step;//uv 空间
+                    detailUV_lu += LUstepDir * pow(2,i)*_TrackThreshold + LUstepDir; // 这里是在法线方向上移动步长，进行追踪 +LUStepDir是为了不采样到自身的体素
                     float3 RayUV_lu = voxelUV + detailUV_lu;
                     detalColor += tex3Dlod(_VoxelTex,float4(RayUV_lu,i)).rgb * saturate(dot(N,lu));//这里采用的是 密集体素 + mipmap 的追踪的方法
                     
-                    detailUV_ru += normalize(ru)*step * pow(2,i)*_TrackThreshold; // 这里是在法线方向上移动步长，进行追踪
+                    float3 RUstepDir = normalize(ru)*step;
+                    detailUV_ru += RUstepDir * pow(2,i)*_TrackThreshold+RUstepDir; // 这里是在法线方向上移动步长 +RUStepDir是为了不采样到自身的体素
                     float3 RayUV_ru = voxelUV + detailUV_ru;
                     detalColor += tex3Dlod(_VoxelTex,float4(RayUV_ru,i)).rgb* saturate(dot(N,ru));//这里采用的是 密集体素 + mipmap 的追踪的方法
                     
-                    detailUV_ld += normalize(ld)*step * pow(2,i)*_TrackThreshold; // 这里是在法线方向上移动步长，进行追踪
+                    float3 LDstepDir = normalize(ld)*step;
+                    detailUV_ld += LDstepDir * pow(2,i)*_TrackThreshold+LDstepDir; // 这里是在法线方向上移动步长，进行追踪
                     float3 RayUV_ld = voxelUV + detailUV_ld;
                     detalColor += tex3Dlod(_VoxelTex,float4(RayUV_ld,i)).rgb* saturate(dot(N,ld));//这里采用的是 密集体素 + mipmap 的追踪的方法
                     
-                    detailUV_rd += normalize(rd)*step * pow(2,i)*_TrackThreshold; // 这里是在法线方向上移动步长，进行追踪
+                    float3 RDstepDir = normalize(rd)*step;
+                    detailUV_rd += RDstepDir* pow(2,i)*_TrackThreshold+RDstepDir; // 这里是在法线方向上移动步长，进行追踪
                     float3 RayUV_rd = voxelUV + detailUV_rd;
                     detalColor += tex3Dlod(_VoxelTex,float4(RayUV_rd,i)).rgb* saturate(dot(N,rd));//这里采用的是 密集体素 + mipmap 的追踪的方法
                 }
