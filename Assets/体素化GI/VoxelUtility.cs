@@ -192,4 +192,20 @@ public static class VoxelUtility
 
         return !(min > radius || max < -radius);
     }
+    
+    public static void Create3DTex(VoxelMgr mgr,bool saveLocal)
+    {
+        mgr.CreateTex3D("Assets/体素化GI/",out string assetPath,out Texture3D tex,saveLocal);
+        if (saveLocal)
+        {
+            AssetDatabase.Refresh();
+            var tex3D = AssetDatabase.LoadAssetAtPath<Texture3D>(assetPath);
+            Shader.SetGlobalTexture("_VoxelTex",tex3D);
+        }
+        else
+        {
+            Shader.SetGlobalTexture("_VoxelTex",tex);
+        }
+        // targetMat.SetTexture("_VoxelTex",tex3D);
+    }
 }

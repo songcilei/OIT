@@ -28,19 +28,28 @@ public struct triangleInfo//48 bytes
   
 public class VoxelMgr : MonoBehaviour
 {
-    private ComputeShader _CS;
+    public ComputeShader _CS;
     public VoxelInfo[,,] VoxelInfo;
     public bool EnableSAT = false;
-    private Vector3 radius = Vector3.one;
-    private Vector3 center;
-    private Vector3 expent;
+    public Vector3 lowLeft;
+    public Vector3 upperRight;
+    public Vector3 radius = Vector3.one;
+    public Vector3 center;
+    public Vector3 expent;
     private Texture3D ResultTex;
-    private int density;
+    public int density;
     private Bounds _bounds;
-    private bool DebugMode;
-    private bool DrawDebugMode;
-    private bool DrawDebugShadowPoint;
-    private Light mainLight;
+    public bool DebugMode;
+    public bool DrawDebugMode;
+    public bool DrawDebugShadowPoint;
+    public Light mainLight;
+    public Texture3D tex3D;
+    private Color[] _texPixelColors;
+    List<GameObject> InterObj = new List<GameObject>();
+    private List<triangleInfo> trisInfo = new List<triangleInfo>();
+    List<VoxelInfo> InterVoxelInfo = new List<VoxelInfo>();
+    private ComputeShader CS;
+    private int kernelHandle;
     public void Init( int Density,Vector3 low,Vector3 up,bool enableSAT,Light light,bool enableDebugMode,bool enableDrawDebug,bool enableDrawDebugShadowPoint)
     {
         // 初始化体素信息
@@ -59,6 +68,8 @@ public class VoxelMgr : MonoBehaviour
                 }
             }
         }
+        lowLeft = low;
+        upperRight = up;
         radius = (up- low) / Density;
         center = (low + up) / 2;
         expent = (up - low)/2;
@@ -70,14 +81,37 @@ public class VoxelMgr : MonoBehaviour
         DrawDebugMode = enableDrawDebug;
         DrawDebugShadowPoint = enableDrawDebugShadowPoint;
         mainLight = light;
+        _texPixelColors = new Color[density * density * density];
+        Start();
     }
-    
+
+    private void Start()
+    {
+        // int tex3Size = density * density * density;
+        tex3D = new Texture3D(density,density,density,TextureFormat.ARGB32,true);
+        tex3D.wrapMode = TextureWrapMode.Clamp;
+        tex3D.filterMode = FilterMode.Bilinear;
+        tex3D.name = "VoxelTex3D";
+        
+        //compute Cube Color
+        CS = Resources.Load<ComputeShader>("VoxelLight");
+        
+        kernelHandle = CS.FindKernel("CSMainT");
+    }
+
+    private void Update()
+    {
+        CreateVoxel(lowLeft, upperRight);
+        VoxelUtility.Create3DTex(this,false);
+    }
+
+
     /// <summary>
     /// 创建紧凑型体素网络
     /// </summary>
     public void CreateVoxel(Vector3 lowerLeft, Vector3 upperRight)
     {  
-        List<GameObject> InterObj = new List<GameObject>();
+        InterObj.Clear();
         var rds = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
         
         foreach (var rd in rds)
@@ -99,10 +133,10 @@ public class VoxelMgr : MonoBehaviour
     
     public void GetMeshsInfo(List<GameObject> objs)
     {
-        List<triangleInfo> trisInfo;
+        
         foreach (var obj in objs)//遍历所有对象
         {
-            trisInfo = new List<triangleInfo>();
+            trisInfo.Clear();
             Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
             var vertices = mesh.vertices;
             var triangles = mesh.triangles;
@@ -132,7 +166,7 @@ public class VoxelMgr : MonoBehaviour
                 info.index = new int3(triangles[i],triangles[i+1],triangles[i+2]);
                 trisInfo.Add(info);
             }
-            var local2World = obj.transform.localToWorldMatrix;
+            // var local2World = obj.transform.localToWorldMatrix;
             ComputeVoxelForCPU(trisInfo,obj.transform, MainCol);
         }
 
@@ -164,6 +198,7 @@ public class VoxelMgr : MonoBehaviour
         UnityEngine.Debug.Log("体素化网格数量:" + count);
     }
     
+    /*
     private void ComputeVoxelForGPU(List<triangleInfo> tris,Matrix4x4 local2World)
     {
         ComputeShader cs = Resources.Load<ComputeShader>("VoxelCompute");
@@ -184,7 +219,8 @@ public class VoxelMgr : MonoBehaviour
         
         trisBuffer.Release();
     }
-
+    */
+    
     /// <summary>
     /// CPU纯数学计算  体素生成
     /// </summary>
@@ -192,7 +228,7 @@ public class VoxelMgr : MonoBehaviour
     /// <param name="trans"></param>
     private void ComputeVoxelForCPU(List<triangleInfo> tris,Transform trans,Color mainColor)
     {
-        List<VoxelInfo> InterVoxelInfo = new List<VoxelInfo>();
+        InterVoxelInfo.Clear();
         for (int i = 0; i < tris.Count; i++)
         {
             //顶点转世界坐标
@@ -249,33 +285,45 @@ public class VoxelMgr : MonoBehaviour
             Vector3 index = InterVoxelInfo[i].Index;
             VoxelInfo[(int)index.x, (int)index.y, (int)index.z].color = Cols[i];
         }
-
-
-
     }
 
-    public string CreateTex3D(string path)
+    public void CreateTex3D(string path,out string assetPath,out Texture3D tex,bool saveLocal= true)
     {
-        // int tex3Size = density * density * density;
-        Texture3D tex3D = new Texture3D(density,density,density,TextureFormat.ARGB32,true);
-        for (int x = 0; x < tex3D.width; x++)
+        int index = 0;
+        for (int x = 0; x < density; x++)
         {
-            for (int y = 0; y < tex3D.height; y++)
+            for (int y = 0; y < density; y++)
             {
-                for (int z = 0; z < tex3D.depth; z++)
+                for (int z = 0; z < density; z++)
                 {
-                    tex3D.SetPixel(x,y,z,VoxelInfo[x,y,z].color);
+                    _texPixelColors[index] = VoxelInfo[x, y, z].color;
+                    index++;
                 }
             }
         }
+        
+        
+        // for (int x = 0; x < tex3D.width; x++)
+        // {
+        //     for (int y = 0; y < tex3D.height; y++)
+        //     {
+        //         for (int z = 0; z < tex3D.depth; z++)
+        //         {
+        //             tex3D.SetPixel(x,y,z,VoxelInfo[x,y,z].color);
+        //         }
+        //     }
+        // }
+        tex3D.SetPixels(_texPixelColors);
         tex3D.Apply();
-        tex3D.wrapMode = TextureWrapMode.Clamp;
-        tex3D.filterMode = FilterMode.Bilinear;
-        tex3D.name = "VoxelTex3D";
 
-        string assetPath = path + "/VoxelTex3D.asset";
-        AssetDatabase.CreateAsset(tex3D,assetPath);
-        return assetPath;
+        tex = tex3D;
+        if (saveLocal)
+        {
+            assetPath = path + "/VoxelTex3D.asset";
+            AssetDatabase.CreateAsset(tex3D,assetPath);
+        }
+
+        assetPath = string.Empty;
     }
     
     
@@ -287,14 +335,10 @@ public class VoxelMgr : MonoBehaviour
     /// <returns></returns>
     public Vector4[] ComputeShading( List<VoxelInfo> voxelCubes,Color mainColor)
     {
-                
-//compute Cube Color
-        ComputeShader CS = Resources.Load<ComputeShader>("VoxelLight");
         if (CS==null)
         {
             UnityEngine.Debug.LogError("没有找到CS文件");
         }
-        int kernelHandle = CS.FindKernel("CSMainT");
         List<Vector4> positions = new List<Vector4>();
         List<Vector4> BendNormal = new List<Vector4>();
         List<int> attens = new List<int>();
@@ -355,8 +399,6 @@ public class VoxelMgr : MonoBehaviour
         {
             return 1;
         }
-
-
         Vector3 oriPos = (Vector3)voxel.Position + radius / 2;
         Vector3 dir =  -light.transform.forward;
         RaycastHit hit;

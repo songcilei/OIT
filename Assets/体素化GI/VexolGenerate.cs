@@ -92,11 +92,7 @@ public class VoxelGenerate : EditorWindow
     private void Create3DTex()
     {
         var vmgr = this.mgr.GetComponent<VoxelMgr>();
-        string path = vmgr.CreateTex3D("Assets/体素化GI/");
-        AssetDatabase.Refresh();
-        var tex3D = AssetDatabase.LoadAssetAtPath<Texture3D>(path);
-        // targetMat.SetTexture("_VoxelTex",tex3D);
-        Shader.SetGlobalTexture("_VoxelTex",tex3D);
+        VoxelUtility.Create3DTex(vmgr,true);
     }
 
 

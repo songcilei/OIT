@@ -13,32 +13,26 @@ RWBuffer<float4> _voxelColors;
 void CSMainT (uint3 id : SV_DispatchThreadID)
 {
     
-//main light
-    float3 L = normalize(_MainLightPosition);
-    float3 N = normalize(_voxelNormals[id.x]);
-    float3 worldPos = _voxelPositions[id.x];
-    half3 diffuse = saturate(dot(N,L))*_voxelAtten[id.x]*_MainColor;
-   
-// ambient
-    float3 ambinet = pow(SampleSH(N),1/2.2f);    
-    diffuse += ambinet*_MainColor;
-//add light
-    uint lightsCount = GetAdditionalLightsCount();
-    uint meshRenderingLayers = GetMeshRenderingLayer();
-
-    LIGHT_LOOP_BEGIN(lightsCount)
-        Light light = GetAdditionalLight(lightIndex, worldPos);
-
-    // #ifdef _LIGHT_LAYERS
-    // if (IsMatchingLightLayer(light.layerMask, meshRenderingLayers))
-    //     #endif
-    // {
-        half3 lightColor = light.color * light.distanceAttenuation;
-        diffuse += LightingLambert(lightColor, light.direction, N);
-    // }
+// main light
+     float3 L = normalize(_MainLightPosition);
+     float3 N = normalize(_voxelNormals[id.x]);
+     float3 worldPos = _voxelPositions[id.x];
+     half3 diffuse = saturate(dot(N,L))*_voxelAtten[id.x]*_MainColor;
     
-    LIGHT_LOOP_END
-    diffuse-=1;
+ // ambient
+     float3 ambinet = pow(SampleSH(N),1/2.2f);    
+     diffuse += ambinet*_MainColor;
+ //add light
+     uint lightsCount = GetAdditionalLightsCount();
+     uint meshRenderingLayers = GetMeshRenderingLayer();
+
+     LIGHT_LOOP_BEGIN(lightsCount)
+         Light light = GetAdditionalLight(lightIndex, worldPos);
+         half3 lightColor = light.color * light.distanceAttenuation;
+         diffuse += LightingLambert(lightColor, light.direction, N);
+     
+     LIGHT_LOOP_END
+     diffuse-=1;
     _voxelColors[id.x] = float4(diffuse,1);
     
 }
