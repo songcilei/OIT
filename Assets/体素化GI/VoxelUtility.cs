@@ -194,16 +194,24 @@ public static class VoxelUtility
     
     public static void Create3DTex(VoxelMgr mgr,bool saveLocal)
     {
-        mgr.CreateTex3D("Assets/体素化GI/",out string assetPath,out Texture3D tex,saveLocal);
+        mgr.CreateTex3D("Assets/体素化GI/",out string assetPath,saveLocal);
         if (saveLocal)
         {
             AssetDatabase.Refresh();
             var tex3D = AssetDatabase.LoadAssetAtPath<Texture3D>(assetPath);
+            if (tex3D==null)
+            {
+                Debug.Log("没有加载到3d texture");
+            }
             Shader.SetGlobalTexture("_VoxelTex",tex3D);
         }
         else
         {
-            Shader.SetGlobalTexture("_VoxelTex",tex);
+            if (mgr.tex3D==null)
+            {
+                Debug.Log("创建3Dtex 失败");
+            }
+            Shader.SetGlobalTexture("_VoxelTex",mgr.tex3D);
         }
         // targetMat.SetTexture("_VoxelTex",tex3D);
     }

@@ -85,7 +85,7 @@ public class VoxelGenerate : EditorWindow
         mgr = new GameObject();
         mgr.name = "VoxelMgr";
         var vmgr = mgr.AddComponent<VoxelMgr>();
-        vmgr.Init(Density, lowerLeft, upperRight,SAT,MainLight,DebugMode,DrawDebugMode,DrawDebugShadowPoint);
+        vmgr.EditorInit(Density, lowerLeft, upperRight,SAT,MainLight,DebugMode,DrawDebugMode,DrawDebugShadowPoint);
         vmgr.CreateVoxel(lowerLeft,upperRight);
     }
 

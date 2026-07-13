@@ -31,7 +31,6 @@ public struct triangleInfo//48 bytes
   
 public class VoxelMgr : MonoBehaviour
 {
-    public ComputeShader _CS;
     public VoxelInfo[,,] VoxelInfo;
     public bool EnableSAT = false;
     public Vector3 lowLeft;
@@ -39,7 +38,7 @@ public class VoxelMgr : MonoBehaviour
     public Vector3 radius = Vector3.one;
     public Vector3 center;
     public Vector3 expent;
-    private Texture3D ResultTex;
+    // private Texture3D ResultTex;
     public int density;
     private Bounds _bounds;
     private Vector3 _boundsMin;
@@ -54,12 +53,50 @@ public class VoxelMgr : MonoBehaviour
     List<GameObject> InterObj = new List<GameObject>();
     private List<triangleInfo> trisInfo = new List<triangleInfo>();
     List<VoxelInfo> InterVoxelInfo = new List<VoxelInfo>();
-    private ComputeShader CS;
+    public ComputeShader CS;
     private int kernelHandle;
-    public void Init( int Density,Vector3 low,Vector3 up,bool enableSAT,Light light,bool enableDebugMode,bool enableDrawDebug,bool enableDrawDebugShadowPoint)
+    public void EditorInit( int Density,Vector3 low,Vector3 up,bool enableSAT,Light light,bool enableDebugMode,bool enableDrawDebug,bool enableDrawDebugShadowPoint)
+    {
+        lowLeft = low;
+        upperRight = up;
+        density = Density;
+        EnableSAT = enableSAT;
+        DebugMode = enableDebugMode;
+        DrawDebugMode = enableDrawDebug;
+        DrawDebugShadowPoint = enableDrawDebugShadowPoint;
+        mainLight = light;
+        Init();
+    }
+
+    public void Init()
     {
         // 初始化体素信息
-        VoxelInfo = new VoxelInfo[Density, Density, Density];
+        VoxelInfo = new VoxelInfo[density, density, density];
+        voxelInfoInit();
+
+        radius = (upperRight - lowLeft) / density;
+        center = (lowLeft + upperRight) / 2;
+        expent = (upperRight - lowLeft)/2;
+        _bounds = new Bounds(center, expent*2);
+        _boundsMin = _bounds.min;
+        _boundsMax = _bounds.max;
+        _boundsSize = _boundsMax - _boundsMin;
+        // ResultTex = new Texture3D(density, density, density, TextureFormat.RGBA32, false);
+        _texPixelColors = new Color[density * density * density];
+        
+        //compute Cube Color
+        CS = Resources.Load<ComputeShader>("VoxelLight");
+        kernelHandle = CS.FindKernel("CSMainT");
+        // int tex3Size = density * density * density;
+        
+        tex3D = new Texture3D(density,density,density,TextureFormat.ARGB32,true);
+        tex3D.wrapMode = TextureWrapMode.Clamp;
+        tex3D.filterMode = FilterMode.Bilinear;
+        tex3D.name = "VoxelTex3D";
+    }
+
+    void voxelInfoInit()
+    {
         for (int x = 0; x < VoxelInfo.GetLength(0); x++)
         {
             for (int y = 0; y < VoxelInfo.GetLength(1); y++)
@@ -74,38 +111,11 @@ public class VoxelMgr : MonoBehaviour
                 }
             }
         }
-        lowLeft = low;
-        upperRight = up;
-        radius = (up- low) / Density;
-        center = (low + up) / 2;
-        expent = (up - low)/2;
-        density = Density;
-        _bounds = new Bounds(center, expent*2);
-        _boundsMin = _bounds.min;
-        _boundsMax = _bounds.max;
-        _boundsSize = _boundsMax - _boundsMin;
-        ResultTex = new Texture3D(Density, Density, Density, TextureFormat.RGBA32, false);
-        EnableSAT = enableSAT;
-        DebugMode = enableDebugMode;
-        DrawDebugMode = enableDrawDebug;
-        DrawDebugShadowPoint = enableDrawDebugShadowPoint;
-        mainLight = light;
-        _texPixelColors = new Color[density * density * density];
-        Start();
     }
 
     private void Start()
     {
-        // int tex3Size = density * density * density;
-        tex3D = new Texture3D(density,density,density,TextureFormat.ARGB32,true);
-        tex3D.wrapMode = TextureWrapMode.Clamp;
-        tex3D.filterMode = FilterMode.Bilinear;
-        tex3D.name = "VoxelTex3D";
-        
-        //compute Cube Color
-        CS = Resources.Load<ComputeShader>("VoxelLight");
-
-        kernelHandle = CS.FindKernel("CSMainT");
+        Init();
     }
 
     private void Update()
@@ -121,6 +131,7 @@ public class VoxelMgr : MonoBehaviour
     public void CreateVoxel(Vector3 lowerLeft, Vector3 upperRight)
     {  
         InterObj.Clear();
+        voxelInfoInit();
         var rds = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
         
         foreach (var rd in rds)
@@ -143,6 +154,7 @@ public class VoxelMgr : MonoBehaviour
     public void GetMeshsInfo(List<GameObject> objs)
     {
         trisInfo.Clear();
+        
         foreach (var obj in objs)//遍历所有对象
         {
             
@@ -178,6 +190,7 @@ public class VoxelMgr : MonoBehaviour
                 trisInfo.Add(info);
             }
         }
+
         ComputeVoxelForCPU(trisInfo);
         Debug();
 
@@ -287,8 +300,11 @@ public class VoxelMgr : MonoBehaviour
                 }
             }
         }
-        
 
+        if (InterVoxelInfo.Count==0)
+        {
+            UnityEngine.Debug.Log("没有可渲染的体素");
+        }
         // 计算光照颜色
          var Cols = ComputeShading(InterVoxelInfo.ToArray());
          for (int i = 0; i < InterVoxelInfo.Count; i++)
@@ -298,9 +314,9 @@ public class VoxelMgr : MonoBehaviour
          }
     }
 
-    public void CreateTex3D(string path,out string assetPath,out Texture3D tex,bool saveLocal= true)
+    public void CreateTex3D(string path,out string assetPath,bool saveLocal= true)
     {
-
+        // tex3D.SetPixels(null);
         for (int z = 0; z < density; z++)
         {
             for (int y = 0; y < density; y++)
@@ -313,28 +329,28 @@ public class VoxelMgr : MonoBehaviour
             }
         }
         tex3D.SetPixels(_texPixelColors);
-        
-        
-        // for (int x = 0; x < tex3D.width; x++)
+        //
+        // for (int x = 0; x < density; x++)
         // {
-        //     for (int y = 0; y < tex3D.height; y++)
+        //     for (int y = 0; y < density; y++)
         //     {
-        //         for (int z = 0; z < tex3D.depth; z++)
+        //         for (int z = 0; z < density; z++)
         //         {
-        //             tex3D.SetPixel(x,y,z,VoxelInfo[x,y,z].color);
+        //             tex3D.SetPixel(x, y, z, VoxelInfo[x, y, z].color);
         //         }
         //     }
         // }
+        
+        
         tex3D.Apply();
 
-        tex = tex3D;
+        assetPath = string.Empty;
+        
         if (saveLocal)
         {
             assetPath = path + "/VoxelTex3D.asset";
             AssetDatabase.CreateAsset(tex3D,assetPath);
         }
-
-        assetPath = string.Empty;
     }
 
 
@@ -374,7 +390,7 @@ public class VoxelMgr : MonoBehaviour
             mainColors = new Vector4[currentLength];
             BendNormal = new Vector4[currentLength];
             
-            oldCount = voxelCubes.Length;
+            oldCount = currentLength;
         }
 
         for (int i = 0; i < currentLength; i++)
@@ -437,11 +453,11 @@ public class VoxelMgr : MonoBehaviour
 
     private void OnDestroy()
     {
-        resultBuff.Release();
-        positionsBuff.Release();
-        normalsBuff.Release();
-        attensBuff.Release();
-        mainColorsBuff.Release();
+        resultBuff?.Release();
+        positionsBuff?.Release();
+        normalsBuff?.Release();
+        attensBuff?.Release();
+        mainColorsBuff?.Release();
     }
 
 
