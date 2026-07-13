@@ -97,17 +97,33 @@ public class VoxelMgr : MonoBehaviour
 
     void voxelInfoInit()
     {
-        for (int x = 0; x < VoxelInfo.GetLength(0); x++)
+        for (int x = 0; x < density; x++)
         {
-            for (int y = 0; y < VoxelInfo.GetLength(1); y++)
+            for (int y = 0; y < density; y++)
             {
-                for (int z = 0; z < VoxelInfo.GetLength(2); z++)
+                for (int z = 0; z < density; z++)
                 {
                     VoxelInfo[x, y, z].State = 0;
-                    VoxelInfo[x, y, z].normals = new Vector3();
+                    VoxelInfo[x, y, z].normals = Vector3.zero;
                     VoxelInfo[x, y, z].Index = new Vector3(x, y, z);
                     VoxelInfo[x, y, z].color = Color.black;
                     VoxelInfo[x, y, z].atten = 1;
+                }
+            }
+        }
+    }
+
+    void voxelInfoUpdateInit()
+    {
+        for (int x = 0; x < density; x++)
+        {
+            for (int y = 0; y < density; y++)
+            {
+                for (int z = 0; z < density; z++)
+                {
+                    VoxelInfo[x, y, z].State = 0;
+                    VoxelInfo[x, y, z].normals = Vector3.zero;
+                    VoxelInfo[x, y, z].color = Color.black;
                 }
             }
         }
@@ -131,7 +147,7 @@ public class VoxelMgr : MonoBehaviour
     public void CreateVoxel(Vector3 lowerLeft, Vector3 upperRight)
     {  
         InterObj.Clear();
-        voxelInfoInit();
+        voxelInfoUpdateInit();
         var rds = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
         
         foreach (var rd in rds)
@@ -293,7 +309,7 @@ public class VoxelMgr : MonoBehaviour
                         VoxelInfo[x, y, z].normals = VoxelUtility.GetTriangleNormal(a,b,c);
                         VoxelInfo[x, y, z].mainColor = tris[i].mainColor;
                         //计算光照阴影
-                        VoxelInfo[x, y, z].atten = ComputeAtten(VoxelInfo[x, y, z],mainLight,x,y,z);
+                        //VoxelInfo[x, y, z].atten = ComputeAtten(VoxelInfo[x, y, z],mainLight,x,y,z);
                         
                         InterVoxelInfo.Add(VoxelInfo[x,y,z]);
                     }
