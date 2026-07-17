@@ -63,7 +63,7 @@ namespace SDFShadow.Editor
             public int LeftChildIndex;
             public int RightChildIndex;
 
-            public bool IsLeaf => TriangleCount > 0;
+            public bool IsLeaf => TriangleCount > 0; //表示当前时子叶节点  内部有三角形
         }
 
         /// <summary>
@@ -99,7 +99,7 @@ namespace SDFShadow.Editor
             public float SignedDistance(Vector3 point)
             {
                 float distance = ClosestDistance(point);//获取点到模型最近距离
-                bool inside = IsPointInsideClosedMesh(point);//判断点是否在模型内部
+                bool inside = IsPointInsideClosedMesh(point);//判断点是否在模型内部 使用的奇偶射线法 检测的
                 return inside ? -distance : distance;
             }
 
@@ -107,10 +107,15 @@ namespace SDFShadow.Editor
             public float ClosestDistance(Vector3 point)
             {
                 float bestDistanceSqr = float.PositiveInfinity;
-                SearchClosestTriangle(0, point, ref bestDistanceSqr);//查询三角形最近顶点 这里返回的距离是平方 
+                SearchClosestTriangle(0, point, ref bestDistanceSqr);//查询三角形最近顶点 这里返回的距离是平方   剪枝
                 return Mathf.Sqrt(bestDistanceSqr);//这里开方返回真实距离
             }
 
+            /// <summary>
+            /// 检测点位于三角形内还是外 使用的奇偶射线法 检测的
+            /// </summary>
+            /// <param name="point"></param>
+            /// <returns></returns>
             public bool IsPointInsideClosedMesh(Vector3 point)
             {
                 // 不用纯 X/Y/Z 轴方向，减少射线刚好穿过边或顶点的概率。
@@ -128,12 +133,13 @@ namespace SDFShadow.Editor
                 Bounds nodeBounds = triangles[start].Bounds;
                 Bounds centerBounds = new Bounds(triangles[start].Center, Vector3.zero);
 
-                for (int i = start + 1; i < start + count; i++)
+                for (int i = start + 1; i < start + count; i++) 
                 {
                     nodeBounds.Encapsulate(triangles[i].Bounds);//轴对齐包围盒
                     centerBounds.Encapsulate(triangles[i].Center);//中心 包围盒
                 }
 
+                //如果三角面数小于等于叶子节点最大三角形数，则创建一个叶子节点
                 if (count <= leafTriangleCount)
                 {
                     nodes[nodeIndex] = new BvhNode
@@ -163,13 +169,14 @@ namespace SDFShadow.Editor
                 int leftChild = BuildNode(start, leftCount);
                 int rightChild = BuildNode(start + leftCount, rightCount);
 
+                // 创建一个非叶子节点 并充填对应参数
                 nodes[nodeIndex] = new BvhNode
                 {
                     Bounds = nodeBounds,
                     FirstTriangleIndex = -1,
                     TriangleCount = 0,
-                    LeftChildIndex = leftChild,
-                    RightChildIndex = rightChild
+                    LeftChildIndex = leftChild,//左子叶 index
+                    RightChildIndex = rightChild//右子叶 index
                 };
 
                 return nodeIndex;
@@ -195,9 +202,17 @@ namespace SDFShadow.Editor
                 if (nodeDistanceSqr > bestDistanceSqr)
                     return;
 
-                if (node.IsLeaf)
+                if (node.IsLeaf)//表示当前节点时子叶节点 内部有三角形的存在  // 这里感觉有问题。我其实只需要保存最近的aabb盒子的距离就好了  我为什么要遍历所有齐内的三角形？？
+                //然后直到找到最短距离的aabb盒子  再在该bvh的Nodes内进行查找最近的三角面
+                //知道原因了：不这么做的原因是 其最近的AABB包围盒内不一定triangle 的距离也是最近的！！！！
+                //1. 先访问 bounds 更近的节点
+                //2. 在叶子节点里遍历该 leaf 的 triangles
+                //3. 得到当前 bestDistance
+                //4. 回头检查其他节点
+                //5. 如果其他节点的 bounds 距离已经大于 bestDistance，就跳过
+                //6. 否则也必须继续查
                 {
-                    for (int i = 0; i < node.TriangleCount; i++)
+                    for (int i = 0; i < node.TriangleCount; i++)//遍历node内的三角形 和  当前顶点求最近点
                     {
                         Triangle tri = triangles[node.FirstTriangleIndex + i];
                         float triangleDistanceSqr = DistanceSqrToTriangle(tri.A, tri.B, tri.C, point);//求三角形 point 到三角形的最近距离平方
@@ -226,6 +241,13 @@ namespace SDFShadow.Editor
                 }
             }
 
+            /// <summary>
+            ///  射线与三角形的交点
+            /// </summary>
+            /// <param name="nodeIndex"></param>
+            /// <param name="origin"></param>
+            /// <param name="direction"></param>
+            /// <returns></returns>
             private int CountRayTriangleHits(int nodeIndex, Vector3 origin, Vector3 direction)
             {
                 BvhNode node = nodes[nodeIndex];
@@ -271,7 +293,7 @@ namespace SDFShadow.Editor
                 throw new ArgumentNullException(nameof(settings));
 
             int resolution = Mathf.Clamp(settings.Resolution, 4, 256);
-            Triangle[] triangles = BuildTriangles(mesh);//存到三角 类中
+            Triangle[] triangles = BuildTriangles(mesh);//构建所有三角形类
             var bvh = new TriangleBvh(triangles, settings.LeafTriangleCount);//創建BVH 三角形树
 
             Bounds sdfBounds = mesh.bounds;
@@ -302,10 +324,10 @@ namespace SDFShadow.Editor
                     }
                 }
 
-                onProgress?.Invoke((z + 1f) / resolution);
+                onProgress?.Invoke((z + 1f) / resolution);//进度条 更新
             }
 
-            if (settings.NormalizeByMaxDistance)
+            if (settings.NormalizeByMaxDistance)//根据最大距离 归一化sdf  
             {
                 for (int i = 0; i < values.Length; i++)
                     values[i] /= maxAbsDistance;
@@ -406,6 +428,16 @@ namespace SDFShadow.Editor
             return planeDistance * planeDistance;
         }
 
+        /// <summary>
+        /// 射线和三角面 相交检测
+        /// </summary>
+        /// <param name="origin"></param>
+        /// <param name="direction"></param>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <param name="c"></param>
+        /// <param name="distance"></param>
+        /// <returns></returns>
         private static bool RayIntersectsTriangle(Vector3 origin, Vector3 direction, Vector3 a, Vector3 b, Vector3 c, out float distance)
         {
             distance = 0f;
@@ -434,6 +466,13 @@ namespace SDFShadow.Editor
             return distance > epsilon;
         }
 
+        /// <summary>
+        /// 射线和aabb 包围盒检测相交
+        /// </summary>
+        /// <param name="origin"></param>
+        /// <param name="direction"></param>
+        /// <param name="bounds"></param>
+        /// <returns></returns>
         private static bool RayIntersectsBounds(Vector3 origin, Vector3 direction, Bounds bounds)
         {
             Vector3 invDirection = new Vector3(
