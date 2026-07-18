@@ -26,7 +26,7 @@ struct Node
     uint childCount;
 };
 
-StructuredBuffer<Node> Nodes;
+StructuredBuffer<Node> Nodes;//bvh node
 StructuredBuffer<float3> Vertices;
 StructuredBuffer<float3> Normals;
 

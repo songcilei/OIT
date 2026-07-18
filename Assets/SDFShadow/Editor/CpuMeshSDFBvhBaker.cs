@@ -467,7 +467,8 @@ namespace SDFShadow.Editor
         }
 
         /// <summary>
-        /// 射线和aabb 包围盒检测相交
+        /// 射线和aabb 包围盒检测相交   slab 算法
+        /// https://www.cnblogs.com/sailJs/p/17861241.html
         /// </summary>
         /// <param name="origin"></param>
         /// <param name="direction"></param>
@@ -475,6 +476,7 @@ namespace SDFShadow.Editor
         /// <returns></returns>
         private static bool RayIntersectsBounds(Vector3 origin, Vector3 direction, Bounds bounds)
         {
+            //这里是倒数的原因是 射线的向量是向量除法  这里求逆向量下面就可以用乘法了  特别傻逼。。
             Vector3 invDirection = new Vector3(
                 1f / SafeDirection(direction.x),
                 1f / SafeDirection(direction.y),
