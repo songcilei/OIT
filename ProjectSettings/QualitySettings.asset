@@ -82,7 +82,7 @@ QualitySettings:
     realtimeGICPUUsage: 25
     lodBias: 1
     maximumLODLevel: 0
-    enableLODCrossFade: 0
+    enableLODCrossFade: 1
     streamingMipmapsActive: 0
     streamingMipmapsAddAllCameras: 1
     streamingMipmapsMemoryBudget: 512
@@ -94,7 +94,7 @@ QualitySettings:
     asyncUploadBufferSize: 16
     asyncUploadPersistentBuffer: 1
     resolutionScalingFixedDPIFactor: 1
-    customRenderPipeline: {fileID: 11400000, guid: 4b3a313d50dbc9748885bcfcfdcf8775,
+    customRenderPipeline: {fileID: 11400000, guid: a6484fc7f421e464bb2b63ad0b375153,
       type: 2}
     terrainQualityOverrides: 0
     terrainPixelError: 1
