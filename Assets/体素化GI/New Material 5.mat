@@ -68,7 +68,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _VoxelTex:
-        m_Texture: {fileID: 11700000, guid: 8a7d2ac97ad436649810659efbb07350, type: 2}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - unity_Lightmaps:
@@ -122,7 +122,7 @@ Material:
     - _Color: {r: 0, g: 0.9608454, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _highAABB: {r: 400, g: 400, b: 400, a: 0}
+    - _highAABB: {r: 320, g: 320, b: 320, a: 0}
     - _lowAABB: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
 --- !u!114 &345740590376618312

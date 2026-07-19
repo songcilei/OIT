@@ -113,8 +113,8 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0
-    - _TrackMaxCount: 3
-    - _TrackThreshold: 1
+    - _TrackMaxCount: 4
+    - _TrackThreshold: 0.5
     - _WorkflowMode: 1
     - _ZWrite: 1
     m_Colors:
@@ -122,7 +122,7 @@ Material:
     - _Color: {r: 0, g: 0.16732642, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _highAABB: {r: 400, g: 400, b: 400, a: 0}
+    - _highAABB: {r: 320, g: 320, b: 320, a: 0}
     - _lowAABB: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
 --- !u!114 &2950070273195926346
