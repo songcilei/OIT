@@ -10,14 +10,37 @@ using UnityEngine;
 
 public static class MyMeshSDFBakery
 {
-    
-    
-    public static void Bakery(int resolution,Mesh mesh,Action<float>  progress=null)
+
+    public static void PrintBounds(Mesh mesh,float padding)
     {
-        Vector3 low = mesh.bounds.min;
-        Vector3 up = mesh.bounds.max;
+        if (mesh==null)
+        {
+            return;
+        }
+        Vector3 low = mesh.bounds.min-new Vector3(padding, padding, padding);
+        Vector3 up = mesh.bounds.max+new Vector3(padding, padding, padding);
+        Debug.Log("Low:"+ low);
+        Debug.Log("Up:"+up);
+
+
+        Material mat = Selection.activeGameObject.GetComponent<MeshRenderer>().sharedMaterial;
+        mat.SetVector("_Low", low);
+        mat.SetVector("_Up", up);
+    }
+
+
+    public static void Bakery(int resolution,Mesh mesh,float padding,Action<float>  progress=null)
+    {
+        if (mesh==null)
+        {
+            return;
+        }
+        Vector3 low = mesh.bounds.min-new Vector3(padding, padding, padding);
+        Vector3 up = mesh.bounds.max+new Vector3(padding, padding, padding);
+        Debug.Log("Low:"+ low);
+        Debug.Log("Up:"+up);
         // 创建bvh树
-        BVHSDFTree.CreateTree(low, up, mesh, 6);
+        BVHSDFTree.CreateTree(low, up,mesh, 6);
         BVHSDFTree.Debug();
         Debug.Log("创建树完毕!");
         // 构建体素坐标系 使用bvh树加速计算
@@ -57,6 +80,8 @@ public static class MyMeshSDFBakery
         
         //保存SDF
         Texture3D tex3d = new Texture3D(resolution, resolution, resolution, TextureFormat.RFloat, false);
+        tex3d.filterMode = FilterMode.Trilinear;
+        tex3d.wrapMode = TextureWrapMode.Clamp;
         tex3d.SetPixels(voxelInfos);
         tex3d.name = $"{mesh.name}_CPU_SDF_{resolution}";
         tex3d.Apply();
@@ -97,8 +122,8 @@ public static class BVHSDFTree{
     {
         Nodes.Clear();
         Triangles.Clear();
-        
-        Bounds bound = new Bounds((up+low)/2, up- low);
+
+        Bounds bound = new Bounds((low+up)/2, up- low);
         int[] ts = mesh.triangles;
 
         for (int i = 0; i < ts.Length; i+=3)
@@ -136,7 +161,7 @@ public static class BVHSDFTree{
         node.leftIndex = Nodes.Count;
         Nodes.Add(node);
 
-        if (node.triangleCount < minLeftCount)//递归结束条件
+        if (node.triangleCount <= minLeftCount)//递归结束条件
         {
             node.isLeaf = 1;
             return node.bvhIndex;
@@ -154,12 +179,12 @@ public static class BVHSDFTree{
         float minDist = float.PositiveInfinity;
         //求离点最近的三角形
         float dist = ClosestDistance(0,point,Triangles,minDist);
-        UnityEngine.Debug.Log("point:"+point +"  dist:"+dist); 
+        // UnityEngine.Debug.Log("point:"+point +"  dist:"+dist); 
         //计算 sdf
         //奇偶射线法 判断 是否在三角形内 还是三角形外
         Vector3 direction = new Vector3(1f, 0.37139067f, 0.52981293f).normalized;
         int hitCount = CountRayTriangleHits(0, point, direction);
-        bool inside = (hitCount & 1) == 1;
+        bool inside = (hitCount & 1) == 1;//奇偶
         //返回sdf
         return inside? -dist :dist;
     }
@@ -175,41 +200,7 @@ public static class BVHSDFTree{
     {
 //是否是最终子叶
         var node = Nodes[index];
-        //这里对leftNode 和 rightNode 的  AABB 包围盒的距离进行判断  
-        //如果有其中子叶的ab 大于最近距离  则 不考虑跳过
-
-        if (node.isLeaf == 0)
-        {
-            float leftDistBound = MySDFBakeryUnlit.DistanceSqrToBounds(Nodes[node.leftIndex].bounds, point);
-            float rightDistBound = MySDFBakeryUnlit.DistanceSqrToBounds(Nodes[node.rightIndex].bounds, point);
-
-            float leftDist = 0;
-            float rightDist = 0;
-    
-            if (leftDistBound<minDist)//左子叶 小于最小距离  进行下一级检测
-            {
-                leftDist = ClosestDistance(node.leftIndex, point, trianglesList, minDist);
-            
-                
-            }
-
-            if (rightDistBound<minDist)//右子叶 小于最小距离  进行下一级检测
-            {
-                rightDist = ClosestDistance(node.rightIndex, point, trianglesList, minDist);
-               
-            }
-
-            if (rightDist<leftDist)
-            {
-                return rightDist;
-            }
-            else
-            {
-                return leftDist;
-            }
-            
-        }
-        
+        //如果是最终子叶
         if (node.isLeaf==1)
         {
             for (int i =0; i < node.triangleCount ; i++)
@@ -224,6 +215,49 @@ public static class BVHSDFTree{
             }
             return minDist;
         }
+        
+        
+        //这里对leftNode 和 rightNode 的  AABB 包围盒的距离进行判断  
+        //如果有其中子叶的ab 大于最近距离  则 不考虑跳过
+
+        if (node.isLeaf == 0)
+        {
+            float leftDistBound = MySDFBakeryUnlit.DistanceSqrToBounds(Nodes[node.leftIndex].bounds, point);
+            float rightDistBound = MySDFBakeryUnlit.DistanceSqrToBounds(Nodes[node.rightIndex].bounds, point);
+
+            float bestDistance = minDist;
+ 
+            // 判断哪个更近  两个都需要计算  原因是两个可能都满足条件 即距离小于最近距离
+            if (leftDistBound<rightDistBound)//先判断哪个更新
+            {
+                if (leftDistBound<bestDistance * bestDistance)//优先计算更近的那个
+                {
+                    bestDistance = ClosestDistance(node.leftIndex, point, trianglesList, bestDistance);
+                }
+
+                if (rightDistBound<bestDistance*bestDistance)
+                {
+                    bestDistance = ClosestDistance(node.rightIndex, point, trianglesList, bestDistance);
+                }
+            }
+            else
+            {
+                if (rightDistBound<bestDistance*bestDistance)
+                {
+                    bestDistance = ClosestDistance(node.rightIndex, point, trianglesList, bestDistance);
+                }
+
+                if (leftDistBound<bestDistance*bestDistance)
+                {
+                    bestDistance = ClosestDistance(node.leftIndex, point, trianglesList, bestDistance);
+                }
+            }
+
+            return bestDistance;
+        }
+
+        
+
         
         // //左执行
         // float leftDist =ClosestDistance(node.leftIndex, point, trianglesList);
@@ -273,10 +307,14 @@ public static class BVHSDFTree{
 
     private static Bounds ReComputeBounds(int firstIndex,int count ,List<Triangles> trianglesList)
     {
-        Bounds bouns = new Bounds(trianglesList[firstIndex].vert1, Vector3.one);
+        Bounds bouns = new Bounds(trianglesList[firstIndex].vert1, Vector3.one*0.01f);
+        bouns.Encapsulate(trianglesList[firstIndex].vert2);
+        bouns.Encapsulate(trianglesList[firstIndex].vert3);
         for (int i = 1; i < count; i++)
         {
             bouns.Encapsulate(trianglesList[firstIndex + i].vert1);
+            bouns.Encapsulate(trianglesList[firstIndex + i].vert2);
+            bouns.Encapsulate(trianglesList[firstIndex + i].vert3);
         }
         return bouns;
     }

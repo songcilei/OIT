@@ -9,6 +9,7 @@ public class MyMeshSDFBakeryEditor : EditorWindow
     private Mesh targetMesh;
     private Vector3 lower;
     private Vector3 upper;
+    private float padding = 0.2f;
     private int resolution = 64;
     
     [MenuItem("Tools/SDF/MySDFBakeryTool")]
@@ -23,13 +24,19 @@ public class MyMeshSDFBakeryEditor : EditorWindow
         // ms = target as MyMeshSDFBakery;
         targetMesh = EditorGUILayout.ObjectField(targetMesh, typeof(Mesh), true) as Mesh;
         resolution = EditorGUILayout.IntField("resolution", resolution);
-        lower = EditorGUILayout.Vector3Field("lower", lower);
-        upper = EditorGUILayout.Vector3Field("upper", upper);
-        
+        // lower = EditorGUILayout.Vector3Field("lower", lower);
+        // upper = EditorGUILayout.Vector3Field("upper", upper);
+        //
+        padding = EditorGUILayout.FloatField("padding", padding);
         GUILayout.Space(50);
         if (GUILayout.Button("bakery",GUILayout.Height(75)))
         {
             Bakery();
+        }
+
+        if (GUILayout.Button("printBounds",GUILayout.Height(75)))
+        {
+            MyMeshSDFBakery.PrintBounds(targetMesh, padding);
         }
     }
 
@@ -37,7 +44,7 @@ public class MyMeshSDFBakeryEditor : EditorWindow
 
     private void Bakery()
     {
-        MyMeshSDFBakery.Bakery(resolution,targetMesh, progress =>
+        MyMeshSDFBakery.Bakery(resolution,targetMesh, padding,progress =>
         {
             EditorUtility.DisplayProgressBar("Bakery", $"Bakery:"+progress*100.0f, progress);
         });

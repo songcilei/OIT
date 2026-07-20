@@ -2,6 +2,8 @@ Shader "SDFShadow/SimpleSDF3D"
 {
     Properties
     {
+        _Low("Low",Vector) =(0,0,0,0)
+        _Up("Up",Vector) = (1,1,1,1)
         _SDFTex ("SDF Texture3D", 3D) = "black" {}
         _Range ("Show Range", Float) = 0.03
         _StepSize ("Step Size", Float) = 0.01
@@ -29,6 +31,8 @@ Shader "SDFShadow/SimpleSDF3D"
             float _StepSize;
             float _MaxSteps;
             float4 _Color;
+            float3 _Low;
+            float3 _Up;
 
             struct appdata
             {
@@ -61,12 +65,15 @@ Shader "SDFShadow/SimpleSDF3D"
                 
                 float3 p = i.localPos;
 
-                for (int s = 0; s < 32; s++)
+                
+                int s = 0;
+                [loop]
+                for (; s < _MaxSteps; s++)
                 {
                     if (s >= _MaxSteps)
                         break;
 
-                    float3 uvw = p + 0.5;
+                    float3 uvw = (p-_Low) / (_Up - _Low); 
 
                     if (!Inside01(uvw))
                         break;
@@ -74,11 +81,17 @@ Shader "SDFShadow/SimpleSDF3D"
                     float sdf = tex3D(_SDFTex, uvw).r;
 
                     if (abs(sdf) <= _Range)
-                        return _Color;
+                    {
+                        break;
+                        // return _Color;
+                    }
+         
 
                     p += rayDir * _StepSize;
                 }
-
+                float4 clc = 1-(s/(float)(_MaxSteps-1));
+                return pow(saturate(clc),1/2.2f);
+                
                 discard;
                 return 0;
             }

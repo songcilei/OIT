@@ -40,26 +40,41 @@ namespace SDFShadow
         /// <param name="axis"></param>
         /// <param name="list"></param>
         /// <returns></returns>
-        public static void SortTriangle(int axis,List<Triangles> list)//x 0  y 1 z 2
+        public static void SortTriangle(int axis, List<Triangles> list)
         {
-            if (axis == 0)
+            list.Sort((a, b) =>
             {
-                // return list.OrderBy(x => x.vert1).ToList();
-                list.Sort((x,y)=>x.vert1.x.CompareTo(y.vert1.x));
-            }
+                Vector3 centerA = (a.vert1 + a.vert2 + a.vert3) / 3f;
+                Vector3 centerB = (b.vert1 + b.vert2 + b.vert3) / 3f;
 
-            if (axis == 1)
-            {
-                // return list.OrderBy(x => x.vert2).ToList();
-                list.Sort((x,y)=>x.vert2.x.CompareTo(y.vert2.x));
-            }
-            
-            if (axis == 2)
-            {
-                // return list.OrderBy(x => x.vert3).ToList();
-                list.Sort((x,y)=>x.vert3.x.CompareTo(y.vert3.x));
-                
-            }
+                float valueA;
+                float valueB;
+
+                switch (axis)
+                {
+                    case 0:
+                        valueA = centerA.x;
+                        valueB = centerB.x;
+                        break;
+
+                    case 1:
+                        valueA = centerA.y;
+                        valueB = centerB.y;
+                        break;
+
+                    case 2:
+                        valueA = centerA.z;
+                        valueB = centerB.z;
+                        break;
+
+                    default:
+                        valueA = centerA.x;
+                        valueB = centerB.x;
+                        break;
+                }
+
+                return valueA.CompareTo(valueB);
+            });
         }
 
 
