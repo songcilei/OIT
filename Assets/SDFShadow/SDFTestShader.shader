@@ -2,6 +2,7 @@ Shader "SDFShadow/SimpleSDF3D"
 {
     Properties
     {
+        _padding("Padding",Float)=0.01
         _Low("Low",Vector) =(0,0,0,0)
         _Up("Up",Vector) = (1,1,1,1)
         _SDFTex ("SDF Texture3D", 3D) = "black" {}
@@ -17,7 +18,7 @@ Shader "SDFShadow/SimpleSDF3D"
 
         Pass
         {
-            Blend SrcAlpha OneMinusSrcAlpha
+            Blend SrcAlpha OneMinusSrcAlpha 
             ZWrite Off
             Cull Back
 
@@ -33,7 +34,7 @@ Shader "SDFShadow/SimpleSDF3D"
             float4 _Color;
             float3 _Low;
             float3 _Up;
-
+            float _padding;
             struct appdata
             {
                 float4 vertex : POSITION;
@@ -72,8 +73,8 @@ Shader "SDFShadow/SimpleSDF3D"
                 {
                     if (s >= _MaxSteps)
                         break;
-
-                    float3 uvw = (p-_Low) / (_Up - _Low); 
+            
+                    float3 uvw = (p-(_Low-_padding)) / ((_Up+_padding) - (_Low-_padding)); 
 
                     if (!Inside01(uvw))
                         break;
