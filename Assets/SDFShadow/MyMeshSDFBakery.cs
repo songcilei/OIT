@@ -29,14 +29,25 @@ public static class MyMeshSDFBakery
     }
 
 
-    public static void Bakery(int resolution,Mesh mesh,float padding,Action<float>  progress=null)
+    public static void Bakery(int resolution,Mesh mesh,bool useCustomBounds,Vector3 lower,Vector3 uper,float padding,Action<float>  progress=null)
     {
         if (mesh==null)
         {
             return;
         }
-        Vector3 low = mesh.bounds.min-new Vector3(padding, padding, padding);
-        Vector3 up = mesh.bounds.max+new Vector3(padding, padding, padding);
+
+        Vector3 low;
+        Vector3 up;
+        if (useCustomBounds)
+        {
+            low = lower - padding*Vector3.one;
+            up = uper + padding*Vector3.one;
+        }
+        else
+        {
+            low = mesh.bounds.min-new Vector3(padding, padding, padding);
+            up = mesh.bounds.max+new Vector3(padding, padding, padding);
+        }
         Debug.Log("Low:"+ low);
         Debug.Log("Up:"+up);
         // 创建bvh树

@@ -64,7 +64,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SDFTex:
-        m_Texture: {fileID: 11700000, guid: b9e14369f5d5f654a95e9f1296fadedb, type: 2}
+        m_Texture: {fileID: 11700000, guid: a358862c4e8e67f4198c00841ccf77e0, type: 2}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SpecGlossMap:
@@ -109,7 +109,7 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
-    - _Range: 0.08
+    - _Range: 0.05
     - _ReceiveShadows: 1
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0

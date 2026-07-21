@@ -7,6 +7,7 @@ using UnityEngine;
 public class MyMeshSDFBakeryEditor : EditorWindow
 {
     private Mesh targetMesh;
+    private bool useCustomBounds;
     private Vector3 lower;
     private Vector3 upper;
     private float padding = 0.2f;
@@ -24,8 +25,12 @@ public class MyMeshSDFBakeryEditor : EditorWindow
         // ms = target as MyMeshSDFBakery;
         targetMesh = EditorGUILayout.ObjectField(targetMesh, typeof(Mesh), true) as Mesh;
         resolution = EditorGUILayout.IntField("resolution", resolution);
-        // lower = EditorGUILayout.Vector3Field("lower", lower);
-        // upper = EditorGUILayout.Vector3Field("upper", upper);
+        useCustomBounds = EditorGUILayout.Toggle("UseCustomBound", useCustomBounds);
+        if (useCustomBounds)
+        {
+            lower = EditorGUILayout.Vector3Field("lower", lower);
+            upper = EditorGUILayout.Vector3Field("upper", upper);
+        }
         //
         padding = EditorGUILayout.FloatField("padding", padding);
         GUILayout.Space(50);
@@ -44,7 +49,7 @@ public class MyMeshSDFBakeryEditor : EditorWindow
 
     private void Bakery()
     {
-        MyMeshSDFBakery.Bakery(resolution,targetMesh, padding,progress =>
+        MyMeshSDFBakery.Bakery(resolution,targetMesh,useCustomBounds,lower,upper, padding,progress =>
         {
             EditorUtility.DisplayProgressBar("Bakery", $"Bakery:"+progress*100.0f, progress);
         });

@@ -1,0 +1,12 @@
+{
+  "name": "CpuVoxelRingBuffer.Tests",
+  "references": [
+    "CpuVoxelRingBuffer"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}
