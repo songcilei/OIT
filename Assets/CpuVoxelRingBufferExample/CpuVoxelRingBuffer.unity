@@ -270,7 +270,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   target: {fileID: 961739753}
-  cacheSize: {x: 8, y: 4, z: 8}
+  cacheSize: {x: 4, y: 2, z: 4}
   voxelSize: 1
   drawFilledVoxels: 1
   logUpdates: 1

@@ -43,6 +43,15 @@ public class MyMeshSDFBakeryEditor : EditorWindow
         {
             MyMeshSDFBakery.PrintBounds(targetMesh, padding);
         }
+
+        if (GUILayout.Button("printSelectObjAABB",GUILayout.Height(75)))
+        {
+            var obj = Selection.activeGameObject;
+            var bb = obj.GetComponent<Renderer>().bounds;
+            Debug.Log("Min:"+bb.min);
+            Debug.Log("Max:"+bb.max);
+        }
+        
     }
 
 

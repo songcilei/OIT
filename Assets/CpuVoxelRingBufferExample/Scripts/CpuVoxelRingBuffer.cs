@@ -9,7 +9,7 @@ using UnityEngine;
 /// </summary>
 public sealed class CpuVoxelRingBuffer
 {
-    private readonly int[,,] values;
+    public readonly int[,,] values;
 
     /// <summary>缓存沿 X、Y、Z 方向的体素数量。</summary>
     public Vector3Int Size { get; }
@@ -78,7 +78,7 @@ public sealed class CpuVoxelRingBuffer
     public void MoveTo(Vector3Int newMinWorldVoxel)
     {
         LastUpdatedVoxelCount = 0;
-
+ 
         if (newMinWorldVoxel == MinWorldVoxel)
         {
             return;
@@ -154,10 +154,14 @@ public sealed class CpuVoxelRingBuffer
     private void WriteWorldVoxel(Vector3Int worldVoxel)
     {
         Vector3Int index = WorldToBufferIndex(worldVoxel);
+
+        
         values[index.x, index.y, index.z] = CreateSampleValue(
             worldVoxel.x,
             worldVoxel.y,
             worldVoxel.z);
+        
+        Debug.Log("xyz:"+index + "    value:" + values[index.x, index.y, index.z]);
         LastUpdatedVoxelCount++;
     }
 }

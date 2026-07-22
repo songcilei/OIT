@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 /// <summary>
@@ -19,6 +20,23 @@ public sealed class CpuVoxelRingBufferDemo : MonoBehaviour
 
     private CpuVoxelRingBuffer buffer;
 
+    [Button(ButtonSizes.Gigantic)]
+    private void TestValue()
+    {
+        for (int z = 0; z < buffer.values.GetLength(2); z++)
+        {
+            for (int y = 0; y < buffer.values.GetLength(1); y++)
+            {
+                for (int x = 0; x < buffer.values.GetLength(0); x++)
+                {
+                    Debug.Log("index:"+x+" "+y+" "+z +"  value:"+buffer.values[x, y, z]);
+                    
+                    
+                }
+            }
+        }
+    }
+    
     private void Start()
     {
         // 没有手动指定目标时，自动使用场景中的 Main Camera。
@@ -105,7 +123,8 @@ public sealed class CpuVoxelRingBufferDemo : MonoBehaviour
         voxelSize = Mathf.Max(0.01f, voxelSize);
     }
 
-    private void OnDrawGizmosSelected()
+    //绘制辅助线框
+    private void OnDrawGizmos()
     {
         // buffer 在进入 Play Mode 并执行 Start 后才存在。
         if (buffer == null)
