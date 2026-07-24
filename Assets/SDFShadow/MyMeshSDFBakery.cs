@@ -96,10 +96,32 @@ public static class MyMeshSDFBakery
         tex3d.SetPixels(voxelInfos);
         tex3d.name = $"{mesh.name}_CPU_SDF_{resolution}";
         tex3d.Apply();
-        AssetDatabase.CreateAsset(tex3d, $"Assets/SDFShadow/Generated/{mesh.name}_CPU_SDF_{resolution}.asset");
+        string path = $"Assets/SDFShadow/Generated/{mesh.name}_CPU_SDF_{resolution}.asset";
+        AssetDatabase.CreateAsset(tex3d, path);
         AssetDatabase.SaveAssets();
+        var tex =AssetDatabase.LoadAssetAtPath<Texture3D>(path);
+        if (tex!=null)
+        {
+            AddSdfCMP(tex);
+        }
         Debug.Log("保存SDF完毕!");
     }
+
+    private static void AddSdfCMP(Texture3D tex)
+    {
+        var obj = Selection.activeGameObject;
+        if (obj.TryGetComponent<VoxelCMPInfo>(out VoxelCMPInfo cmp))
+        {
+            cmp.voxel = tex;
+        }
+        else
+        {
+            cmp = obj.AddComponent<VoxelCMPInfo>();
+            cmp.voxel = tex;
+        }
+    }
+
+
 }
 
 public class Triangles

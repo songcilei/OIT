@@ -7,12 +7,21 @@ public static class Vector3Extensions
     /// <summary>
     /// 向量每个分量除以数值 向下取整
     /// </summary>
-    public static Vector3 DivFloor(this Vector3 vec, float value)
+    public static Vector3Int DivFloor(this Vector3 vec, float value)
     {
-        return new Vector3(
-            Mathf.Floor(vec.x / value),
-            Mathf.Floor(vec.y / value),
-            Mathf.Floor(vec.z / value)
+        return new Vector3Int(
+            Mathf.FloorToInt(vec.x / value),
+            Mathf.FloorToInt(vec.y / value),
+            Mathf.FloorToInt(vec.z / value)
+        );
+    }
+    
+    public static Vector3Int DivFloor(this Vector3Int vec, float value)
+    {
+        return new Vector3Int(
+            Mathf.FloorToInt(vec.x / value),
+            Mathf.FloorToInt(vec.y / value),
+            Mathf.FloorToInt(vec.z / value)
         );
     }
 
@@ -51,5 +60,15 @@ public static class Vector3Extensions
     public static Vector3Int ToInt(this Vector3 vec)
     {
         return new Vector3Int((int)vec.x, (int)vec.y, (int)vec.z);
+    }
+
+    //求余
+    public static Vector3 Mod(this Vector3 vec, int mod)
+    {
+        return new Vector3(vec.x % mod, vec.y % mod, vec.z % mod);
+    }
+    public static Vector3Int Mod(this Vector3Int vec, int mod)
+    {
+        return new Vector3Int(vec.x % mod, vec.y % mod, vec.z % mod);
     }
 }

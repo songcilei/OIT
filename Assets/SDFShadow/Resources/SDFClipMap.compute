@@ -1,0 +1,40 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+RWStructuredBuffer<float> Inputs;
+
+RWTexture3D<float> _ClipMap;
+
+float3 worldVoxelMin;
+float3 worldVoxelMax;
+float3 cacheGrid;
+int PositiveModulo(int value, int modulus)
+{
+    int remainder = value % modulus;
+    return remainder < 0 ? remainder + modulus : remainder;
+}
+
+int3 GetVirtualIndex(float3 worldVoxel)
+{  
+    int3 vitualVoxel = int3(
+        PositiveModulo(floor( worldVoxel.x), cacheGrid.x),
+        PositiveModulo(floor( worldVoxel.y), cacheGrid.y),
+        PositiveModulo(floor( worldVoxel.z), cacheGrid.z)
+        );
+    return vitualVoxel;
+}
+
+[numthreads(8,8,8)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // int voxelX = id.x + worldVoxelMin.x;
+    // int voxelY = id.y + worldVoxelMin.y;
+    // int voxelZ = id.z + worldVoxelMin.z;
+    //
+    // float3 worldVoxel = float3(voxelX, voxelY, voxelZ);
+    // float3 virtualIndex = GetVirtualIndex(worldVoxel);
+    // //
+    //
+    int index = id.x + id.y * cacheGrid.x + id.z * cacheGrid.x * cacheGrid.y ;
+    _ClipMap[id] = Inputs[index];
+}
