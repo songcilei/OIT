@@ -105,7 +105,7 @@ Material:
     - _KK: 6
     - _MaxStep: 32
     - _Metallic: 0
-    - _MinDist: -3.46
+    - _MinDist: 0.01
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
