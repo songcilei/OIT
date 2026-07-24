@@ -58,7 +58,6 @@ public class ClipMapMgr : MonoBehaviour
         _ClipVoxelMgr = new ClipVoxelMgr(cam, clipMapArray, cacheGrid, gridSize, sphereRadiu, currenVoxelMin,
             currenVoxelMax);
         _ClipVoxelMgr.Init();
-        UpdateAllVoxel();
         debugRT3d = _ClipVoxelMgr.rt3d;//这里主要用于Debug
         debugTex3D = _ClipVoxelMgr.DebugCreateTex3D();
         
@@ -74,6 +73,7 @@ public class ClipMapMgr : MonoBehaviour
         currenWorldMax = currenWorldMin + gridSize*new Vector3(cacheGrid.x, cacheGrid.y, cacheGrid.z);
         currenVoxelMin = GetWorldVoxel(currenWorldMin);
         currenVoxelMax = currenVoxelMin + cacheGrid;
+
         //摄像机改变时刷新clip map
         if (oldVoxelMin == currenVoxelMin)
         {
@@ -82,7 +82,9 @@ public class ClipMapMgr : MonoBehaviour
         }
         
         //如果改变距离大于最大网格  则整体网格刷新数据
-        if (currenCamIndex.x-oldcamIndex.x>cacheGrid.x || currenCamIndex.y-oldcamIndex.y>cacheGrid.y || currenCamIndex.z-oldcamIndex.z>cacheGrid.z)
+        if (Mathf.Abs(currenCamIndex.x-oldcamIndex.x)>cacheGrid.x || 
+            Mathf.Abs(currenCamIndex.y-oldcamIndex.y)>cacheGrid.y || 
+            Mathf.Abs(currenCamIndex.z-oldcamIndex.z)>cacheGrid.z)
         {
             UpdateAllVoxel();
             Debug.Log("整体刷新");
@@ -119,6 +121,12 @@ public class ClipMapMgr : MonoBehaviour
         oldcamIndex = currenCamIndex;
         oldVoxelMin = currenVoxelMin;
         oldVoxelMax = oldVoxelMin + cacheGrid;
+        Shader.SetGlobalVector("_ClipMapMin",new Vector4(currenWorldMin.x,currenWorldMin.y,currenWorldMin.z,1));
+        Shader.SetGlobalVector("_ClipMapMax",new Vector4(currenWorldMax.x,currenWorldMax.y,currenWorldMax.z,1));
+    }
+
+    private void LateUpdate()
+    {
 
     }
 
@@ -228,5 +236,10 @@ public class ClipMapMgr : MonoBehaviour
             }
         }
 
+    }
+
+    private void OnDisable()
+    {
+        _ClipVoxelMgr.OnDissable();
     }
 }

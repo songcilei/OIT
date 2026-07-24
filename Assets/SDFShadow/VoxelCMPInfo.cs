@@ -47,6 +47,7 @@ namespace SDFShadow
                     for (int x = 0; x < count.x; x++)
                     {
                         // Debug.Log("x:"+x + "y:"+y+"z:"+z);
+                        // Vector3 halfPixel = new Vector3(1 / voxel.width, 1 / voxel.height, 1 / voxel.depth)*0.5f;
                         int w = Mathf.FloorToInt(x / (float)count.x * texWidht);
                         int h = Mathf.FloorToInt(y / (float)count.y * texHeight);
                         int d = Mathf.FloorToInt(z / (float)count.z * texDepth);
@@ -64,7 +65,7 @@ namespace SDFShadow
             // if (worldVoxel.x < VoxelMin.x || worldVoxel.x > VoxelMax.x) return 1;
             // if (worldVoxel.y < VoxelMin.y || worldVoxel.y > VoxelMax.y) return 1;
             // if (worldVoxel.z < VoxelMin.z || worldVoxel.z > VoxelMax.z) return 1;
-            
+
             Vector3Int localVoxel = worldVoxel - VoxelMin;
             // Vector3Int uvw = new Vector3Int(
             //     localVoxel.x / VoxelSize.x*values.GetLength(0),

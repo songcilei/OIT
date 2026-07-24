@@ -102,7 +102,7 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _KK: 6
+    - _KK: 8.49
     - _MaxStep: 32
     - _Metallic: 0
     - _MinDist: 0.01

@@ -109,6 +109,10 @@ public static class MyMeshSDFBakery
 
     private static void AddSdfCMP(Texture3D tex)
     {
+        if (Selection.activeGameObject==null)
+        {
+            return;
+        }
         var obj = Selection.activeGameObject;
         if (obj.TryGetComponent<VoxelCMPInfo>(out VoxelCMPInfo cmp))
         {
