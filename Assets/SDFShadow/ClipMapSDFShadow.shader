@@ -104,7 +104,7 @@ Shader "Unlit/SDFClipMapShadow"
                     }
                     res = min(res,_KK*dist/depth);
                     depth += dist;
-                    if (depth>5)
+                    if (depth>10)
                     {
                         break;
                     }

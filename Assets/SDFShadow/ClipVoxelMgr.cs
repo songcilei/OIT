@@ -108,16 +108,18 @@ namespace SDFShadow
         public void BuildAllVoxel()
         {
             List<Vector3Int> updateList = new List<Vector3Int>();
-            for (int z = currenVoxelMin.z; z <= currenVoxelMax.z; z++)
+            for (int z = currenVoxelMin.z; z < currenVoxelMax.z; z++)
             {
-                for (int y = currenVoxelMin.y; y <= currenVoxelMax.y; y++)
+                for (int y = currenVoxelMin.y; y < currenVoxelMax.y; y++)
                 {
-                    for (int x = currenVoxelMin.x; x <= currenVoxelMax.x; x++)
+                    for (int x = currenVoxelMin.x; x < currenVoxelMax.x; x++)
                     {
                         updateList.Add(new Vector3Int(x,y,z));
                     }
                 }
             }
+     
+            
             UpdateVoxel(updateList,currenVoxelMin,currenVoxelMax,false);
         }
 

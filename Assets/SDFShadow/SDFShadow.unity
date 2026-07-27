@@ -509,7 +509,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cam: {fileID: 961739752}
   gridSize: 0.125
-  cacheGrid: {x: 64, y: 8, z: 64}
+  cacheGrid: {x: 128, y: 8, z: 128}
   lazyArea: {x: 64, y: 64, z: 64}
   currenWorldMin: {x: 0, y: 0, z: 0}
   currenWorldMax: {x: 0, y: 0, z: 0}

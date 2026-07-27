@@ -47,12 +47,9 @@ public class ClipMapMgr : MonoBehaviour
 
         
         
-        currenWorldMin = WorldPosiMin();
-        currenWorldMax = currenWorldMin + gridSize*new Vector3(cacheGrid.x, cacheGrid.y, cacheGrid.z);
-        currenVoxelMin = GetWorldVoxel(currenWorldMin);
-        currenVoxelMax = currenVoxelMin + cacheGrid;
+        UpdateClipMapBounds();
         oldVoxelMin = currenVoxelMin;
-        oldVoxelMax = currenVoxelMin + cacheGrid;
+        oldVoxelMax = currenVoxelMax;
         sphereRadiu = Mathf.Max(Mathf.Max(cacheGrid.x, cacheGrid.y), cacheGrid.z) / 2.0f;
         
         _ClipVoxelMgr = new ClipVoxelMgr(cam, clipMapArray, cacheGrid, gridSize, sphereRadiu, currenVoxelMin,
@@ -69,10 +66,7 @@ public class ClipMapMgr : MonoBehaviour
     void Update()
     {
         
-        currenWorldMin = WorldPosiMin();
-        currenWorldMax = currenWorldMin + gridSize*new Vector3(cacheGrid.x, cacheGrid.y, cacheGrid.z);
-        currenVoxelMin = GetWorldVoxel(currenWorldMin);
-        currenVoxelMax = currenVoxelMin + cacheGrid;
+        UpdateClipMapBounds();
 
         //摄像机改变时刷新clip map
         if (oldVoxelMin == currenVoxelMin)
@@ -103,9 +97,9 @@ public class ClipMapMgr : MonoBehaviour
                 for (int x = currenVoxelMin.x; x < currenVoxelMax.x; x++)
                 {
                     //这里是只更新懒加载变换了的区域 即和之前不一样的区别
-                    if (x>oldVoxelMin.x && x<oldVoxelMax.x &&
-                        y>oldVoxelMin.y && y<oldVoxelMax.y &&
-                        z>oldVoxelMin.z && z<oldVoxelMax.z)
+                    if (x>=oldVoxelMin.x && x<=oldVoxelMax.x &&
+                        y>=oldVoxelMin.y && y<=oldVoxelMax.y &&
+                        z>=oldVoxelMin.z && z<=oldVoxelMax.z)
                     {
                         continue;
                     }
@@ -180,6 +174,36 @@ public class ClipMapMgr : MonoBehaviour
             Mathf.FloorToInt(worldPos.z/ gridSize)
             );
         return worldVoxel;
+    }
+
+    private void UpdateClipMapBounds()
+    {
+        CalculateAlignedBounds(
+            WorldPosiMin(),
+            cacheGrid,
+            gridSize,
+            out currenVoxelMin,
+            out currenVoxelMax,
+            out currenWorldMin,
+            out currenWorldMax);
+    }
+
+    private static void CalculateAlignedBounds(
+        Vector3 desiredWorldMin,
+        Vector3Int gridDimensions,
+        float voxelSize,
+        out Vector3Int voxelMin,
+        out Vector3Int voxelMax,
+        out Vector3 worldMin,
+        out Vector3 worldMax)
+    {
+        voxelMin = new Vector3Int(
+            Mathf.FloorToInt(desiredWorldMin.x / voxelSize),
+            Mathf.FloorToInt(desiredWorldMin.y / voxelSize),
+            Mathf.FloorToInt(desiredWorldMin.z / voxelSize));
+        voxelMax = voxelMin + gridDimensions;
+        worldMin = (Vector3)voxelMin * voxelSize;
+        worldMax = (Vector3)voxelMax * voxelSize;
     }
     //根据index获取clip map 中心点世界坐标  因为要绘制坐标系 所以需要加上gridSize/2
     public Vector3 GetWorldPos(int x, int y, int z)
