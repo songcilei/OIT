@@ -102,10 +102,10 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _KK: 8.49
-    - _MaxStep: 32
+    - _KK: 8.3
+    - _MaxStep: 15.7
     - _Metallic: 0
-    - _MinDist: 0.01
+    - _MinDist: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _QueueOffset: 0
@@ -118,7 +118,7 @@ Material:
     - _Surface: 0
     - _WorkflowMode: 1
     - _ZWrite: 1
-    - _rayStep: 4
+    - _rayStep: 6.09
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}

@@ -33,12 +33,7 @@ namespace SDFShadow
             this.currenVoxelMax = voxelMax;
             this.clipMapArray = clipMapArray;
             this.clipMapLineArray = new float[cacheGrid.x * cacheGrid.y * cacheGrid.z];//展平的一维数组
-            for (int x = 0; x < cacheGrid.x; x++)
-            for (int y = 0; y < cacheGrid.y; y++)
-            for (int z = 0; z < cacheGrid.z; z++)
-            {
-                this.clipMapArray[x, y, z] = 1;
-            }
+            ResetAllVoxels();
             _CS = Resources.Load<ComputeShader>("SDFClipMap");
         }
 
@@ -47,7 +42,7 @@ namespace SDFShadow
             
             GetAllVoxels();
             CreateTexRT3D();
-            BuildAllVoxel();
+            BuildAllVoxel(currenVoxelMin, currenVoxelMax);
         }
 
 
@@ -105,22 +100,12 @@ namespace SDFShadow
             
         }
 
-        public void BuildAllVoxel()
+        public void BuildAllVoxel(Vector3Int worldVoxelMin, Vector3Int worldVoxelMax)
         {
-            List<Vector3Int> updateList = new List<Vector3Int>();
-            for (int z = currenVoxelMin.z; z < currenVoxelMax.z; z++)
-            {
-                for (int y = currenVoxelMin.y; y < currenVoxelMax.y; y++)
-                {
-                    for (int x = currenVoxelMin.x; x < currenVoxelMax.x; x++)
-                    {
-                        updateList.Add(new Vector3Int(x,y,z));
-                    }
-                }
-            }
-     
-            
-            UpdateVoxel(updateList,currenVoxelMin,currenVoxelMax,false);
+            currenVoxelMin = worldVoxelMin;
+            currenVoxelMax = worldVoxelMax;
+            ResetAllVoxels();
+            UpdateVoxel(new List<Vector3Int>(), currenVoxelMin, currenVoxelMax, false);
         }
 
         /// <summary>
@@ -134,7 +119,7 @@ namespace SDFShadow
             for (int y = currenVoxelMin.y; y < currenVoxelMax.y; y++)
             for (int x = currenVoxelMin.x; x < currenVoxelMax.x; x++)
             {
-                Vector3Int virtualIndex = ClipMapMgr.Instance.GetVirtualIndex(new Vector3(x, y, z));
+                Vector3Int virtualIndex = GetVirtualIndex(new Vector3Int(x, y, z));
                 int zz = z - currenVoxelMin.z;
                 int yy = y - currenVoxelMin.y;
                 int xx = x - currenVoxelMin.x;
@@ -169,6 +154,11 @@ namespace SDFShadow
         {
             currenVoxelMin = worldVoxelMin;
             currenVoxelMax = worldVoxelMax;
+            if (isAddMode)
+            {
+                ResetVoxels(updateList);
+            }
+
             for (int i = 0; i < voxelInfos.Length; i++)
             {
                 var voxel = voxelInfos[i];
@@ -226,18 +216,51 @@ namespace SDFShadow
         bool IsAABBIntersect(Vector3 aMin, Vector3 aMax, Vector3 bMin, Vector3 bMax)
         {
             // 任意轴分离则无相交
-            if (aMax.x < bMin.x || bMax.x < aMin.x) return false;
-            if (aMax.y < bMin.y || bMax.y < aMin.y) return false;
-            if (aMax.z < bMin.z || bMax.z < aMin.z) return false;
+            if (aMax.x <= bMin.x || bMax.x <= aMin.x) return false;
+            if (aMax.y <= bMin.y || bMax.y <= aMin.y) return false;
+            if (aMax.z <= bMin.z || bMax.z <= aMin.z) return false;
             return true;
         }
 
         bool DetailAABBIntersect(Vector3 aMin,Vector3 aMax,Vector3 VoxelPos)
         {
-            if (VoxelPos.x < aMin.x || VoxelPos.x > aMax.x) return false;
-            if (VoxelPos.y < aMin.y || VoxelPos.y > aMax.y) return false;
-            if (VoxelPos.z < aMin.z || VoxelPos.z > aMax.z) return false;
+            if (VoxelPos.x < aMin.x || VoxelPos.x >= aMax.x) return false;
+            if (VoxelPos.y < aMin.y || VoxelPos.y >= aMax.y) return false;
+            if (VoxelPos.z < aMin.z || VoxelPos.z >= aMax.z) return false;
             return true;
+        }
+
+        private void ResetAllVoxels()
+        {
+            for (int x = 0; x < cacheGrid.x; x++)
+            for (int y = 0; y < cacheGrid.y; y++)
+            for (int z = 0; z < cacheGrid.z; z++)
+            {
+                clipMapArray[x, y, z] = 1f;
+            }
+        }
+
+        private void ResetVoxels(List<Vector3Int> voxels)
+        {
+            for (int i = 0; i < voxels.Count; i++)
+            {
+                Vector3Int index = GetVirtualIndex(voxels[i]);
+                clipMapArray[index.x, index.y, index.z] = 1f;
+            }
+        }
+
+        private Vector3Int GetVirtualIndex(Vector3Int worldVoxel)
+        {
+            return new Vector3Int(
+                PositiveModulo(worldVoxel.x, cacheGrid.x),
+                PositiveModulo(worldVoxel.y, cacheGrid.y),
+                PositiveModulo(worldVoxel.z, cacheGrid.z));
+        }
+
+        private static int PositiveModulo(int value, int modulus)
+        {
+            int remainder = value % modulus;
+            return remainder < 0 ? remainder + modulus : remainder;
         }
         public void OnDissable()
         {
