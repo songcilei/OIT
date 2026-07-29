@@ -22,7 +22,6 @@ public class attackMgr : MonoBehaviour
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit))
             {
-                Debug.Log(hit.point);
                 GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 go.transform.position = hit.point;
                 PlayEvent(hit.point);
