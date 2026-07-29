@@ -22,7 +22,7 @@ public static class BakeAOUnilit
         {
             BakeAORd bakeAORd = new BakeAORd();
             bakeAORd.rd = rd;
-            bakeAORd.mats = rd.materials;
+            bakeAORd.mats = rd.sharedMaterials;
             bakeAORd.aoParam = rd.lightmapScaleOffset;
             bakeAORd.aoIndex = rd.lightmapIndex;
             _aoRds.Add(bakeAORd);
@@ -32,6 +32,10 @@ public static class BakeAOUnilit
         _aoShader = Shader.Find("Editor/AOShader");
         foreach (var _ao in _aoRds)
         {
+            if (_ao.aoIndex == -1)
+            {
+                continue;
+            }
             Material mat = new Material(_aoShader);
             mat.SetVector("_AOST",_ao.aoParam);
             mat.SetTexture("_BaseMap", aoTexs[_ao.aoIndex]);
