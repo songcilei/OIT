@@ -16,7 +16,7 @@ public class attackMgr : MonoBehaviour
         if (Input.GetMouseButtonDown(0))
         {
             var mousePos = Input.mousePosition;
-            Debug.Log(mousePos);
+    
             Ray ray = Camera.main
                 .ScreenPointToRay(mousePos);
             RaycastHit hit;
