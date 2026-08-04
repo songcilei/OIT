@@ -6,6 +6,8 @@ public static class URPShaderTemplateCreator
 {
     private const string DefaultUnlitName = "New URP Unlit Shader.shader";
     private const string DefaultLitPbrName = "New URP Lit PBR Shader.shader";
+    private const string DefaultNormalDecalName = "New URP Normal Decal Shader.shader";
+    private const string DefaultOptimizeDecalName = "New URP Optimize Decal Shader.shader";
 
     [MenuItem("Assets/Create/Shader/URP/Unlit Shader Template", priority = 82)]
     private static void CreateUnlitShader()
@@ -19,6 +21,18 @@ public static class URPShaderTemplateCreator
         StartShaderNameEditing(DefaultLitPbrName, ShaderTemplateKind.LitPbr);
     }
 
+    [MenuItem("Assets/Create/Shader/URP/Normal Decal Shader Template", priority = 84)]
+    private static void CreateNormalDecalShader()
+    {
+        StartShaderNameEditing(DefaultNormalDecalName, ShaderTemplateKind.NormalDecal);
+    }
+
+    [MenuItem("Assets/Create/Shader/URP/Optimize Decal Shader Template", priority = 85)]
+    private static void CreateOptimizeDecalShader()
+    {
+        StartShaderNameEditing(DefaultOptimizeDecalName, ShaderTemplateKind.OptimizeDecal);
+    }
+
     public static string CreateUnlitTemplate(string shaderName)
     {
         return UnlitTemplate.Replace("__SHADER_NAME__", shaderName);
@@ -27,6 +41,16 @@ public static class URPShaderTemplateCreator
     public static string CreateLitPbrTemplate(string shaderName)
     {
         return LitPbrTemplate.Replace("__SHADER_NAME__", shaderName);
+    }
+
+    public static string CreateNormalDecalTemplate(string shaderName)
+    {
+        return NormalDecalTemplate.Replace("__SHADER_NAME__", shaderName);
+    }
+
+    public static string CreateOptimizeDecalTemplate(string shaderName)
+    {
+        return OptimizeDecalTemplate.Replace("__SHADER_NAME__", shaderName);
     }
 
     private static void StartShaderNameEditing(string defaultFileName, ShaderTemplateKind templateKind)
@@ -60,7 +84,9 @@ public static class URPShaderTemplateCreator
     private enum ShaderTemplateKind
     {
         Unlit,
-        LitPbr
+        LitPbr,
+        NormalDecal,
+        OptimizeDecal
     }
 
     private sealed class CreateShaderEndNameEditAction : UnityEditor.ProjectWindowCallback.EndNameEditAction
@@ -70,9 +96,24 @@ public static class URPShaderTemplateCreator
         public override void Action(int instanceId, string pathName, string resourceFile)
         {
             string shaderName = Path.GetFileNameWithoutExtension(pathName);
-            string content = TemplateKind == ShaderTemplateKind.Unlit
-                ? CreateUnlitTemplate($"Custom/URP/{shaderName}")
-                : CreateLitPbrTemplate($"Custom/URP/{shaderName}");
+            string shaderNameWithPath = $"Custom/URP/{shaderName}";
+            string content;
+
+            switch (TemplateKind)
+            {
+                case ShaderTemplateKind.Unlit:
+                    content = CreateUnlitTemplate(shaderNameWithPath);
+                    break;
+                case ShaderTemplateKind.LitPbr:
+                    content = CreateLitPbrTemplate(shaderNameWithPath);
+                    break;
+                case ShaderTemplateKind.NormalDecal:
+                    content = CreateNormalDecalTemplate(shaderNameWithPath);
+                    break;
+                default:
+                    content = CreateOptimizeDecalTemplate(shaderNameWithPath);
+                    break;
+            }
 
             File.WriteAllText(pathName, content);
             AssetDatabase.ImportAsset(pathName);
@@ -107,6 +148,7 @@ public static class URPShaderTemplateCreator
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_instancing
 
             #include ""Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl""
 
@@ -114,12 +156,14 @@ public static class URPShaderTemplateCreator
             {
                 float4 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
             {
                 float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             TEXTURE2D(_BaseMap);
@@ -127,12 +171,17 @@ public static class URPShaderTemplateCreator
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
-                half4 _BaseColor;
             CBUFFER_END
+
+            UNITY_INSTANCING_BUFFER_START(URPShaderTemplateProperties)
+                UNITY_DEFINE_INSTANCED_PROP(half4, _BaseColor)
+            UNITY_INSTANCING_BUFFER_END(URPShaderTemplateProperties)
 
             Varyings vert(Attributes input)
             {
                 Varyings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
                 output.positionHCS = TransformObjectToHClip(input.positionOS.xyz);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 return output;
@@ -141,7 +190,8 @@ public static class URPShaderTemplateCreator
             half4 frag(Varyings input) : SV_Target
             {
                 half4 baseMap = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
-                return baseMap * _BaseColor;
+                half4 baseColor = UNITY_ACCESS_INSTANCED_PROP(URPShaderTemplateProperties, _BaseColor);
+                return baseMap * baseColor;
             }
             ENDHLSL
         }
@@ -179,6 +229,7 @@ public static class URPShaderTemplateCreator
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_instancing
 
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
@@ -195,6 +246,7 @@ public static class URPShaderTemplateCreator
                 float3 normalOS : NORMAL;
                 float4 tangentOS : TANGENT;
                 float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
@@ -206,6 +258,7 @@ public static class URPShaderTemplateCreator
                 half4 tangentWS : TEXCOORD3;
                 float4 shadowCoord : TEXCOORD4;
                 half fogFactor : TEXCOORD5;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             TEXTURE2D(_BaseMap);
@@ -215,14 +268,19 @@ public static class URPShaderTemplateCreator
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
-                half4 _BaseColor;
                 half _Metallic;
                 half _Smoothness;
             CBUFFER_END
 
+            UNITY_INSTANCING_BUFFER_START(URPShaderTemplateProperties)
+                UNITY_DEFINE_INSTANCED_PROP(half4, _BaseColor)
+            UNITY_INSTANCING_BUFFER_END(URPShaderTemplateProperties)
+
             Varyings vert(Attributes input)
             {
                 Varyings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
 
                 VertexPositionInputs positionInputs = GetVertexPositionInputs(input.positionOS.xyz);
                 VertexNormalInputs normalInputs = GetVertexNormalInputs(input.normalOS, input.tangentOS);
@@ -248,7 +306,8 @@ public static class URPShaderTemplateCreator
 
             half4 frag(Varyings input) : SV_Target
             {
-                half4 baseMap = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv) * _BaseColor;
+                half4 baseColor = UNITY_ACCESS_INSTANCED_PROP(URPShaderTemplateProperties, _BaseColor);
+                half4 baseMap = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv) * baseColor;
 
                 InputData inputData = (InputData)0;
                 inputData.positionWS = input.positionWS;
@@ -307,6 +366,312 @@ public static class URPShaderTemplateCreator
     }
 
     FallBack ""Hidden/Universal Render Pipeline/FallbackError""
+}
+";
+
+    private const string NormalDecalTemplate = @"Shader ""__SHADER_NAME__""
+{
+    Properties
+    {
+        _BaseMap (""Base Map"", 2D) = ""white"" {}
+        _BaseColor (""Base Color"", Color) = (1, 1, 1, 1)
+        _Opacity (""Opacity"", Range(0, 1)) = 1
+        _Cutoff (""Alpha Cutoff"", Range(0, 1)) = 0.001
+    }
+
+    SubShader
+    {
+        Tags
+        {
+            ""RenderType"" = ""Transparent""
+            ""RenderPipeline"" = ""UniversalPipeline""
+            ""Queue"" = ""Transparent""
+            ""IgnoreProjector"" = ""True""
+        }
+
+        Pass
+        {
+            Name ""NormalDepthDecal""
+            Tags { ""LightMode"" = ""SRPDefaultUnlit"" }
+
+            Cull Front
+            ZWrite Off
+            ZTest Always
+            Blend SrcAlpha OneMinusSrcAlpha
+
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_instancing
+
+            #include ""Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl""
+            #include ""Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl""
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct Varyings
+            {
+                float4 positionHCS : SV_POSITION;
+                float4 screenPos : TEXCOORD0;
+                float3 positionOS : TEXCOORD1;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            TEXTURE2D(_BaseMap);
+            SAMPLER(sampler_BaseMap);
+
+            CBUFFER_START(UnityPerMaterial)
+                float4 _BaseMap_ST;
+            CBUFFER_END
+
+            UNITY_INSTANCING_BUFFER_START(PerInstance)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _BaseColor)
+                UNITY_DEFINE_INSTANCED_PROP(float, _Opacity)
+                UNITY_DEFINE_INSTANCED_PROP(float, _Cutoff)
+            UNITY_INSTANCING_BUFFER_END(PerInstance)
+
+            Varyings vert(Attributes input)
+            {
+                Varyings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+
+                VertexPositionInputs positionInputs =
+                    GetVertexPositionInputs(input.positionOS.xyz);
+                output.positionHCS = positionInputs.positionCS;
+                output.screenPos = ComputeScreenPos(positionInputs.positionCS);
+                output.positionOS = input.positionOS.xyz;
+                return output;
+            }
+
+            half4 frag(Varyings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+
+                float2 screenUV = input.screenPos.xy / input.screenPos.w;
+                float sceneDepth = SampleSceneDepth(screenUV);
+
+                #if UNITY_REVERSED_Z
+                    if (sceneDepth <= 0.00001)
+                        discard;
+                #else
+                    if (sceneDepth >= 0.99999)
+                        discard;
+                #endif
+
+                #if !UNITY_REVERSED_Z
+                    sceneDepth = lerp(UNITY_NEAR_CLIP_VALUE, 1.0, sceneDepth);
+                #endif
+
+                float3 scenePositionWS = ComputeWorldSpacePosition(
+                    screenUV,
+                    sceneDepth,
+                    UNITY_MATRIX_I_VP);
+
+                float3 decalPositionOS = TransformWorldToObject(scenePositionWS);
+                if (any(decalPositionOS < -0.5) ||
+                    any(decalPositionOS > 0.5))
+                    discard;
+
+                float2 decalUV = decalPositionOS.xz + 0.5;
+                decalUV = decalUV * _BaseMap_ST.xy + _BaseMap_ST.zw;
+
+                half4 decal = SAMPLE_TEXTURE2D(
+                    _BaseMap,
+                    sampler_BaseMap,
+                    decalUV) * UNITY_ACCESS_INSTANCED_PROP(PerInstance, _BaseColor);
+
+                decal.a *= UNITY_ACCESS_INSTANCED_PROP(PerInstance, _Opacity);
+                clip(decal.a - UNITY_ACCESS_INSTANCED_PROP(PerInstance, _Cutoff));
+                return decal;
+            }
+            ENDHLSL
+        }
+    }
+}
+";
+
+    private const string OptimizeDecalTemplate = @"Shader ""__SHADER_NAME__""
+{
+    Properties
+    {
+        _BaseMap (""Base Map"", 2D) = ""white"" {}
+        _BaseColor (""Base Color"", Color) = (1, 1, 1, 1)
+        _Opacity (""Opacity"", Range(0, 1)) = 1
+
+        [Toggle(_ProjectionAngleDiscardEnable)] _ProjectionAngleDiscardEnable (""Projection Angle Discard Enable"", Float) = 0
+        _ProjectionAngleDiscardThreshold (""Projection Angle Discard Threshold"", Range(-1, 1)) = 0
+        [Toggle(_UnityFogEnable)] _UnityFogEnable (""Unity Fog Enable"", Float) = 1
+        [Toggle(_SupportOrthographicCamera)] _SupportOrthographicCamera (""Support Orthographic Camera"", Float) = 0
+    }
+
+    SubShader
+    {
+        Tags
+        {
+            ""RenderType"" = ""Overlay""
+            ""RenderPipeline"" = ""UniversalPipeline""
+            ""Queue"" = ""Transparent-499""
+            ""IgnoreProjector"" = ""True""
+        }
+
+        Pass
+        {
+            Name ""OptimizeDepthDecal""
+            Tags { ""LightMode"" = ""UniversalForward"" }
+
+            Cull Front
+            ZWrite Off
+            ZTest Always
+            Blend SrcAlpha OneMinusSrcAlpha
+
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_fog
+            #pragma multi_compile_instancing
+            #pragma shader_feature_local_fragment _ProjectionAngleDiscardEnable
+            #pragma shader_feature_local _UnityFogEnable
+            #pragma shader_feature_local_fragment _SupportOrthographicCamera
+
+            #include ""Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl""
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float2 uv : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct Varyings
+            {
+                float4 positionHCS : SV_POSITION;
+                float4 screenPos : TEXCOORD0;
+                float4 viewRayOS : TEXCOORD1;
+                float4 cameraPosOSAndFogFactor : TEXCOORD2;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            TEXTURE2D(_BaseMap);
+            SAMPLER(sampler_BaseMap);
+
+            TEXTURE2D(_CameraDepthTexture);
+            SAMPLER(sampler_CameraDepthTexture);
+
+            CBUFFER_START(UnityPerMaterial)
+                float4 _BaseMap_ST;
+                float _ProjectionAngleDiscardThreshold;
+            CBUFFER_END
+
+            UNITY_INSTANCING_BUFFER_START(PerInstance)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _BaseColor)
+                UNITY_DEFINE_INSTANCED_PROP(float, _Opacity)
+            UNITY_INSTANCING_BUFFER_END(PerInstance)
+
+            Varyings vert(Attributes input)
+            {
+                Varyings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+
+                VertexPositionInputs positionInputs =
+                    GetVertexPositionInputs(input.positionOS.xyz);
+                output.positionHCS = positionInputs.positionCS;
+
+                #if _UnityFogEnable
+                    output.cameraPosOSAndFogFactor.a = ComputeFogFactor(output.positionHCS.z);
+                #else
+                    output.cameraPosOSAndFogFactor.a = 0;
+                #endif
+
+                output.screenPos = ComputeScreenPos(positionInputs.positionCS);
+
+                float3 viewRay = positionInputs.positionVS;
+                output.viewRayOS.w = viewRay.z;
+                viewRay *= -1;
+
+                float4x4 viewToObjectMatrix = mul(UNITY_MATRIX_I_M, UNITY_MATRIX_I_V);
+                output.viewRayOS.xyz = mul((float3x3)viewToObjectMatrix, viewRay);
+                output.cameraPosOSAndFogFactor.xyz =
+                    mul(viewToObjectMatrix, float4(0, 0, 0, 1)).xyz;
+                return output;
+            }
+
+            #if SHADER_LIBRARY_VERSION_MAJOR < 12
+            float LinearDepthToEyeDepth(float rawDepth)
+            {
+                #if UNITY_REVERSED_Z
+                    return _ProjectionParams.z - (_ProjectionParams.z - _ProjectionParams.y) * rawDepth;
+                #else
+                    return _ProjectionParams.y + (_ProjectionParams.z - _ProjectionParams.y) * rawDepth;
+                #endif
+            }
+            #endif
+
+            half4 frag(Varyings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+
+                input.viewRayOS.xyz /= input.viewRayOS.w;
+
+                float2 screenSpaceUV = input.screenPos.xy / input.screenPos.w;
+                float sceneRawDepth =
+                    SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, screenSpaceUV).r;
+
+                float3 decalSpaceScenePos;
+                #if _SupportOrthographicCamera
+                    if (unity_OrthoParams.w)
+                    {
+                        float sceneDepthVS = LinearDepthToEyeDepth(sceneRawDepth);
+                        float2 viewRayEndPosVSXY =
+                            unity_OrthoParams.xy * (input.screenPos.xy - 0.5) * 2;
+                        float4 vposOrtho = float4(viewRayEndPosVSXY, -sceneDepthVS, 1);
+                        float3 wposOrtho = mul(UNITY_MATRIX_I_V, vposOrtho).xyz;
+                        decalSpaceScenePos =
+                            mul(GetWorldToObjectMatrix(), float4(wposOrtho, 1)).xyz;
+                    }
+                    else
+                    {
+                #endif
+                        float sceneDepthVS = LinearEyeDepth(sceneRawDepth, _ZBufferParams);
+                        decalSpaceScenePos =
+                            input.cameraPosOSAndFogFactor.xyz + input.viewRayOS.xyz * sceneDepthVS;
+                #if _SupportOrthographicCamera
+                    }
+                #endif
+
+                float2 decalSpaceUV = decalSpaceScenePos.xy + 0.5;
+
+                float shouldClip = 0;
+                #if _ProjectionAngleDiscardEnable
+                    float3 decalSpaceHardNormal =
+                        normalize(cross(ddx(decalSpaceScenePos), ddy(decalSpaceScenePos)));
+                    shouldClip =
+                        decalSpaceHardNormal.z > _ProjectionAngleDiscardThreshold ? 1 : 0;
+                #endif
+
+                clip(0.5 - abs(decalSpaceScenePos) - shouldClip);
+
+                float2 uv = decalSpaceUV * _BaseMap_ST.xy + _BaseMap_ST.zw;
+
+                half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv);
+                color *= UNITY_ACCESS_INSTANCED_PROP(PerInstance, _BaseColor);
+                color.a *= UNITY_ACCESS_INSTANCED_PROP(PerInstance, _Opacity);
+
+                #if _UnityFogEnable
+                    color.rgb = MixFog(color.rgb, input.cameraPosOSAndFogFactor.a);
+                #endif
+
+                return color;
+            }
+            ENDHLSL
+        }
+    }
 }
 ";
 }
