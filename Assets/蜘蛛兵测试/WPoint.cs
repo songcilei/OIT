@@ -5,7 +5,6 @@ using UnityEngine;
 public class WPoint : MonoBehaviour
 {
     public Transform _Target;
-    
     void Update()
     {
         if (_Target != null)

@@ -74,7 +74,7 @@ Shader "SHCalculation/Validation Sphere"
                 float3 irradiance = _SH0.rgb * 0.2820947918;
                 irradiance += _SH1.rgb * (0.4886025119 * y);
                 irradiance += _SH2.rgb * (0.4886025119 * z);
-                irradiance += _SH3.rgb * (0.4886025119 * x);
+                irradiance += _SH3.rgb * (0.4886025119 * x); 
                 irradiance += _SH4.rgb * (1.0925484306 * x * y);
                 irradiance += _SH5.rgb * (1.0925484306 * y * z);
                 irradiance += _SH6.rgb * (0.3153915653 * (3.0 * z * z - 1.0));
