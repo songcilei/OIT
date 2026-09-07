@@ -128,7 +128,7 @@ public static class MyMeshSDFBakery
 
 }
 
-public class Triangles
+public class Triangles 
 {
     public Vector3 vert1;
     public Vector3 vert2;
