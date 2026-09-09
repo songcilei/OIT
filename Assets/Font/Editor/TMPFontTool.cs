@@ -44,6 +44,25 @@ public class TMPFontTool : EditorWindow
             RemoveAsset();
         }
 
+        if (GUILayout.Button("ChangeShader",GUILayout.Height(50)))
+        {
+            GameObject obj = Selection.activeGameObject;
+            var tmps = obj.GetComponentsInChildren<TMP_Text>();
+            foreach (var tmp in tmps)
+            {
+                tmp.fontSharedMaterial.shader = Shader.Find("TextMeshPro/Distance Field Compress");
+            }
+
+        }
+
+        if (GUILayout.Button("Debug"))
+        {
+            TMP_Text tmpText = Selection.activeObject as TMP_Text;
+            // tmpText.
+
+        }
+        
+
     }
     
     
@@ -194,12 +213,14 @@ public class TMPFontTool : EditorWindow
         int width = fontAsset.atlasWidth;
         int height = fontAsset.atlasHeight;
         Texture2D texturePacker =
-            new Texture2D(fontAsset.atlasWidth, fontAsset.atlasHeight, TextureFormat.RGBA32, false);
+            new Texture2D(fontAsset.atlasWidth, fontAsset.atlasHeight, TextureFormat.RGBA32, false, true);
+        texturePacker.wrapMode = TextureWrapMode.Repeat;
+        texturePacker.filterMode = FilterMode.Bilinear;
 
-        Color[] channel1 = fontAsset.atlasTextures[3].GetPixels(0, 0, width, height);
-        Color[] channel2 = fontAsset.atlasTextures[2].GetPixels(0, 0, width, height);
-        Color[] channel3 = fontAsset.atlasTextures[1].GetPixels(0, 0, width, height);
-        Color[] channel4 = fontAsset.atlasTextures[0].GetPixels(0, 0, width, height);
+        Color[] channel1 = fontAsset.atlasTextures[0].GetPixels(0, 0, width, height);
+        Color[] channel2 = fontAsset.atlasTextures[1].GetPixels(0, 0, width, height);
+        Color[] channel3 = fontAsset.atlasTextures[2].GetPixels(0, 0, width, height);
+        Color[] channel4 = fontAsset.atlasTextures[3].GetPixels(0, 0, width, height);
         Color[] newColors = new Color[width * height];
         for (int i = 0; i < newColors.Length; i++)
         {
@@ -264,9 +285,8 @@ public class TMPFontTool : EditorWindow
             SerializedProperty proGlyphRect = proGlyph.FindPropertyRelative("m_GlyphRect");
             SerializedProperty proGlyphRectX = proGlyphRect.FindPropertyRelative("m_X");
             proGlyphRectX.intValue = proGlyphRectX.intValue + texturePacker.width * proGlyphRectAtlasIndex.intValue;
-            proGlyphRectAtlasIndex.intValue = 0;
+            //proGlyphRectAtlasIndex.intValue = 0;
         }
-        
 
         serializedObject.ApplyModifiedProperties();
         serializedObject.Update();

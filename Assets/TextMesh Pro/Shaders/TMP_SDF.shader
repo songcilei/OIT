@@ -236,12 +236,14 @@ SubShader {
 		fixed4 PixShader(pixel_t input) : SV_Target
 		{
 			UNITY_SETUP_INSTANCE_ID(input);
-
+	
+			
 			float c = tex2D(_MainTex, input.atlas).a;
-
+	
 		#ifndef UNDERLAY_ON
 			clip(c - input.param.x);
 		#endif
+
 
 			float	scale	= input.param.y;
 			float	bias	= input.param.z;
