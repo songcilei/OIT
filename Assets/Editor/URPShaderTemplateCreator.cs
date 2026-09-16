@@ -237,6 +237,10 @@ public static class URPShaderTemplateCreator
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #pragma multi_compile_fog
 
+            // IBL / Reflection Probe variants.
+            #pragma multi_compile _ _REFLECTION_PROBE_BLENDING
+            #pragma multi_compile _ _REFLECTION_PROBE_BOX_PROJECTION
+
             #include ""Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl""
             #include ""Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl""
 
@@ -289,7 +293,9 @@ public static class URPShaderTemplateCreator
                 output.positionWS = positionInputs.positionWS;
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.normalWS = normalInputs.normalWS;
-                output.tangentWS = half4(normalInputs.tangentWS, input.tangentOS.w);
+                output.tangentWS = half4(
+                    normalInputs.tangentWS,
+                    input.tangentOS.w * GetOddNegativeScale());
                 output.shadowCoord = GetShadowCoord(positionInputs);
                 output.fogFactor = ComputeFogFactor(positionInputs.positionCS.z);
 
@@ -306,6 +312,8 @@ public static class URPShaderTemplateCreator
 
             half4 frag(Varyings input) : SV_Target
             {
+                UNITY_SETUP_INSTANCE_ID(input);
+
                 half4 baseColor = UNITY_ACCESS_INSTANCED_PROP(URPShaderTemplateProperties, _BaseColor);
                 half4 baseMap = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv) * baseColor;
 
@@ -357,7 +365,18 @@ public static class URPShaderTemplateCreator
                         inputData.viewDirectionWS);
                 }
 
-                color += inputData.bakedGI * brdfData.diffuse;
+                // URP IBL:
+                // bakedGI supplies diffuse irradiance from spherical harmonics.
+                // GlobalIllumination adds diffuse GI and the prefiltered
+                // skybox / reflection-probe specular response, including
+                // roughness LOD, Fresnel and the environment BRDF.
+                color += GlobalIllumination(
+                    brdfData,
+                    inputData.bakedGI,
+                    surfaceData.occlusion,
+                    inputData.positionWS,
+                    inputData.normalWS,
+                    inputData.viewDirectionWS);
                 color.rgb = MixFog(color.rgb, inputData.fogCoord);
                 return half4(color, surfaceData.alpha);
             }
