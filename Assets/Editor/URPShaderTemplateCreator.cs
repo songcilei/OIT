@@ -209,7 +209,9 @@ public static class URPShaderTemplateCreator
         _BaseColor (""Base Color"", Color) = (1, 1, 1, 1)
         _BumpMap (""Normal Map"", 2D) = ""bump"" {}
         _Metallic (""Metallic"", Range(0, 1)) = 0
+        _MetalTex(""MetalTex"",2D)=""white""{}
         _Smoothness (""Smoothness"", Range(0, 1)) = 0.5
+        _SmoothTex(""SmoothTex"",2D)=""white""{}
     }
 
     SubShader
@@ -331,8 +333,8 @@ public static class URPShaderTemplateCreator
                 SurfaceData surfaceData = (SurfaceData)0;
                 surfaceData.albedo = baseMap.rgb;
                 surfaceData.alpha = baseMap.a;
-                surfaceData.metallic = _Metallic;
-                surfaceData.smoothness = _Smoothness;
+                surfaceData.metallic = _Metallic*SAMPLE_TEXTURE2D(_MetalTex,sampler_MetalTex,input.uv).r;
+                surfaceData.smoothness = _Smoothness*(1-SAMPLE_TEXTURE2D(_SmoothTex,sampler_SmoothTex,input.uv).r);
                 surfaceData.normalTS = half3(0, 0, 1);
                 surfaceData.occlusion = 1;
                 surfaceData.emission = half3(0, 0, 0);
@@ -382,6 +384,8 @@ public static class URPShaderTemplateCreator
             }
             ENDHLSL
         }
+        UsePass ""Universal Render Pipeline/Lit/ShadowCaster""
+        UsePass ""Universal Render Pipeline/Lit/DepthOnly""
     }
 
     FallBack ""Hidden/Universal Render Pipeline/FallbackError""

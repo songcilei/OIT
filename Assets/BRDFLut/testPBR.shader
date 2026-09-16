@@ -187,6 +187,8 @@ Shader "Custom/URP/testPBR"
             }
             ENDHLSL
         }
+        UsePass "Universal Render Pipeline/Lit/ShadowCaster"
+        UsePass "Universal Render Pipeline/Lit/DepthOnly"
     }
 
     FallBack "Hidden/Universal Render Pipeline/FallbackError"
