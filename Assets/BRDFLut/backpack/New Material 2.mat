@@ -68,7 +68,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _IrradianceMap:
-        m_Texture: {fileID: 8900000, guid: 0a7b4b36bdec4df4fa2e7c7f20153ea6, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -100,7 +100,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _PrefilterMap:
-        m_Texture: {fileID: 8900000, guid: 8892f1c2d3b4d07409d0b5cb950befab, type: 3}
+        m_Texture: {fileID: 8900000, guid: 0a7b4b36bdec4df4fa2e7c7f20153ea6, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Roughness:
@@ -147,8 +147,8 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _IBLStrength: 0.99
-    - _IOR: 1.549
+    - _IBLStrength: 1.63
+    - _IOR: 1.5
     - _IORLevel: 0.5
     - _LightIntensity: 2.32
     - _MaxReflectionLOD: 4
