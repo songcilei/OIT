@@ -32,6 +32,12 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
     [Tooltip("不指定时会自动使用 Unity 内置 Sphere 网格。")]
     public Mesh sphereMesh;
 
+    [Tooltip("Sphere Buffer 的预留容量；按钮会在此容量内增加 Sphere。")]
+    [Min(1)] public int sphereCapacity = 256;
+
+    [Tooltip("进入 Play Mode 时先创建的 Sphere 数量。")]
+    [Min(0)] public int initialSphereCount = 100;
+
     [Header("可选资源（不填会自动创建）")]
     [Tooltip("不指定时会自动使用 Unity 内置 Cube 网格。")]
     public Mesh mesh;
@@ -41,7 +47,6 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
 
     // 本例固定绘制 1000 个方盒子，便于把注意力放在 BRG 的核心流程上。
     private const int InstanceCount = 1000;
-    private const int SphereCount = 100;
     private const float SpherePositionMax = 100.0f;
 
     // BRG 中每个矩阵使用 float3x4，而不是普通的 float4x4：12 个 float，共 48 字节。
@@ -73,6 +78,7 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
     private GraphicsBuffer _sphereInstanceBuffer;
     private int[] _sphereRawData;
     private NativeArray<Bounds> _sphereWorldBounds;
+    private int _sphereActiveCount;
     private int _framesSinceMove;
     private int _framesSinceSphereRespawn;
 
@@ -87,6 +93,8 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
         moveProbability = Mathf.Clamp01(moveProbability);
         moveDistance = Mathf.Max(0.0f, moveDistance);
         sphereRespawnProbability = Mathf.Clamp01(sphereRespawnProbability);
+        sphereCapacity = Mathf.Max(1, sphereCapacity);
+        initialSphereCount = Mathf.Clamp(initialSphereCount, 0, sphereCapacity);
         _gameObjectLayer = (byte)gameObject.layer;
 
         CreateFallbackResources();
@@ -108,23 +116,24 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
     private void CreateSphereBufferAndBatch()
     {
         int objectToWorldOffset = BufferHeaderSize;
-        int worldToObjectOffset = objectToWorldOffset + SphereCount * PackedMatrixSize;
-        int colorOffset = worldToObjectOffset + SphereCount * PackedMatrixSize;
-        int totalBufferSize = colorOffset + SphereCount * ColorSize;
+        int worldToObjectOffset = objectToWorldOffset + sphereCapacity * PackedMatrixSize;
+        int colorOffset = worldToObjectOffset + sphereCapacity * PackedMatrixSize;
+        int totalBufferSize = colorOffset + sphereCapacity * ColorSize;
 
         _sphereInstanceBuffer = new GraphicsBuffer(
             GraphicsBuffer.Target.Raw,
             totalBufferSize / sizeof(int),
             sizeof(int));
-        _sphereInstanceBuffer.name = "Simple BRG - 100 Spheres";
+        _sphereInstanceBuffer.name = $"Simple BRG - Sphere Capacity {sphereCapacity}";
 
         _sphereRawData = new int[totalBufferSize / sizeof(int)];
-        _sphereWorldBounds = new NativeArray<Bounds>(SphereCount, Allocator.Persistent);
+        _sphereWorldBounds = new NativeArray<Bounds>(sphereCapacity, Allocator.Persistent);
+        _sphereActiveCount = initialSphereCount;
 
-        for (int i = 0; i < SphereCount; i++)
+        for (int i = 0; i < _sphereActiveCount; i++)
         {
             SetSphereTransform(i, Matrix4x4.TRS(RandomSpherePosition(), Quaternion.identity, Vector3.one));
-            Color color = Color.HSVToRGB(i / (float)SphereCount, 0.35f, 1.0f);
+            Color color = Color.HSVToRGB(i / (float)sphereCapacity, 0.35f, 1.0f);
             WriteFloat4(_sphereRawData, colorOffset / sizeof(int) + i * 4, color.r, color.g, color.b, 1.0f);
         }
 
@@ -208,8 +217,51 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
         {
             _framesSinceSphereRespawn = 0;
             RespawnRandomSpheres();
-            UploadMatrixData(_sphereInstanceBuffer, _sphereRawData, SphereCount);
+            UploadMatrixData(_sphereInstanceBuffer, _sphereRawData, sphereCapacity);
         }
+    }
+
+    /// <summary>
+    /// 每次点击按钮时启用一个预留 Sphere 槽位。
+    /// 这里不重建 GraphicsBuffer、Batch，也不重新注册 Mesh/Material。
+    /// </summary>
+    private void AddOneSphere()
+    {
+        if (_sphereInstanceBuffer == null || _sphereActiveCount >= sphereCapacity)
+            return;
+
+        int newIndex = _sphereActiveCount++;
+        SetSphereTransform(newIndex, Matrix4x4.TRS(RandomSpherePosition(), Quaternion.identity, Vector3.one));
+
+        int colorOffset = BufferHeaderSize / sizeof(int) + sphereCapacity * PackedMatrixSize * 2 / sizeof(int);
+        Color color = Color.HSVToRGB(newIndex / (float)sphereCapacity, 0.35f, 1.0f);
+        WriteFloat4(_sphereRawData, colorOffset + newIndex * 4, color.r, color.g, color.b, 1.0f);
+        UploadSphereSlot(newIndex);
+    }
+
+    private void UploadSphereSlot(int index)
+    {
+        int objectStart = BufferHeaderSize / sizeof(int) + index * 12;
+        int worldStart = BufferHeaderSize / sizeof(int) + sphereCapacity * 12 + index * 12;
+        int colorStart = BufferHeaderSize / sizeof(int) + sphereCapacity * 24 + index * 4;
+
+        _sphereInstanceBuffer.SetData(_sphereRawData, objectStart, objectStart, 12);
+        _sphereInstanceBuffer.SetData(_sphereRawData, worldStart, worldStart, 12);
+        _sphereInstanceBuffer.SetData(_sphereRawData, colorStart, colorStart, 4);
+    }
+
+    private void OnGUI()
+    {
+        if (!Application.isPlaying || _sphereInstanceBuffer == null)
+            return;
+
+        GUILayout.BeginArea(new Rect(20.0f, 20.0f, 260.0f, 90.0f), GUI.skin.box);
+        GUILayout.Label($"Sphere: {_sphereActiveCount} / {sphereCapacity}");
+        GUI.enabled = _sphereActiveCount < sphereCapacity;
+        if (GUILayout.Button("Add one Sphere"))
+            AddOneSphere();
+        GUI.enabled = true;
+        GUILayout.EndArea();
     }
 
     private static void UploadMatrixData(GraphicsBuffer buffer, int[] rawData, int instanceCount)
@@ -276,7 +328,7 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
 
     private void RespawnRandomSpheres()
     {
-        for (int i = 0; i < SphereCount; i++)
+        for (int i = 0; i < _sphereActiveCount; i++)
         {
             if (UnityEngine.Random.value > sphereRespawnProbability)
                 continue;
@@ -297,7 +349,7 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
     private void SetSphereTransform(int instanceIndex, Matrix4x4 objectToWorld)
     {
         int objectToWorldOffset = BufferHeaderSize / sizeof(int);
-        int worldToObjectOffset = objectToWorldOffset + SphereCount * 12;
+        int worldToObjectOffset = objectToWorldOffset + sphereCapacity * 12;
 
         WritePackedMatrix(_sphereRawData, objectToWorldOffset + instanceIndex * 12, objectToWorld);
         WritePackedMatrix(_sphereRawData, worldToObjectOffset + instanceIndex * 12, objectToWorld.inverse);
@@ -381,7 +433,7 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
             visibleInstanceCount = 0,
             drawCommands = Allocate<BatchDrawCommand>(2),
             drawRanges = Allocate<BatchDrawRange>(1),
-            visibleInstances = Allocate<int>(InstanceCount + SphereCount),
+            visibleInstances = Allocate<int>(InstanceCount + _sphereActiveCount),
             drawCommandPickingInstanceIDs = null,
             instanceSortingPositions = null,
             instanceSortingPositionFloatCount = 0
@@ -439,7 +491,7 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
 
         int sphereVisibleOffset = cubeVisibleCount;
         int sphereVisibleCount = 0;
-        for (int i = 0; i < SphereCount; i++)
+        for (int i = 0; i < _sphereActiveCount; i++)
         {
             if (IsVisible(_sphereWorldBounds[i], cullingContext.cullingPlanes))
                 output.visibleInstances[sphereVisibleOffset + sphereVisibleCount++] = i;
@@ -535,6 +587,7 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
         _sphereInstanceBuffer = null;
         _rawData = null;
         _sphereRawData = null;
+        _sphereActiveCount = 0;
         _objectToWorldMatrices = null;
         if (_worldBounds.IsCreated)
             _worldBounds.Dispose();
