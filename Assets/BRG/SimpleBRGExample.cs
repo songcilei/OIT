@@ -15,6 +15,23 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
     [Min(1)] public int columns = 40;
     [Min(0.01f)] public float spacing = 1.2f;
 
+    [Header("移动设置")]
+    [Tooltip("每次移动时，每个 Cube 被随机选中的概率。")]
+    [Range(0.0f, 1.0f)] public float moveProbability = 0.25f;
+
+    [Tooltip("每次被选中的 Cube 朝相机移动的距离。")]
+    [Min(0.0f)] public float moveDistance = 0.1f;
+
+    [Tooltip("移动所朝向的相机；不指定时使用 Main Camera。")]
+    public Camera targetCamera;
+
+    [Header("Sphere 设置")]
+    [Tooltip("每 60 帧，每个 Sphere 被销毁并在新位置生成的概率。")]
+    [Range(0.0f, 1.0f)] public float sphereRespawnProbability = 0.25f;
+
+    [Tooltip("不指定时会自动使用 Unity 内置 Sphere 网格。")]
+    public Mesh sphereMesh;
+
     [Header("可选资源（不填会自动创建）")]
     [Tooltip("不指定时会自动使用 Unity 内置 Cube 网格。")]
     public Mesh mesh;
@@ -24,6 +41,8 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
 
     // 本例固定绘制 1000 个方盒子，便于把注意力放在 BRG 的核心流程上。
     private const int InstanceCount = 1000;
+    private const int SphereCount = 100;
+    private const float SpherePositionMax = 100.0f;
 
     // BRG 中每个矩阵使用 float3x4，而不是普通的 float4x4：12 个 float，共 48 字节。
     private const int PackedMatrixSize = 12 * sizeof(float);
@@ -38,13 +57,24 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
     private BatchRendererGroup _brg;
     private GraphicsBuffer _instanceBuffer;
     private BatchID _batchId;
+    private BatchID _sphereBatchId;
     private BatchMeshID _meshId;
+    private BatchMeshID _sphereMeshId;
     private BatchMaterialID _materialId;
 
     // 只有在 Inspector 没有指定资源时，才会创建并最终销毁这两个运行时资源。
     private Mesh _runtimeMesh;
+    private Mesh _runtimeSphereMesh;
     private Material _runtimeMaterial;
     private byte _gameObjectLayer;
+    private int[] _rawData;
+    private Matrix4x4[] _objectToWorldMatrices;
+    private NativeArray<Bounds> _worldBounds;
+    private GraphicsBuffer _sphereInstanceBuffer;
+    private int[] _sphereRawData;
+    private NativeArray<Bounds> _sphereWorldBounds;
+    private int _framesSinceMove;
+    private int _framesSinceSphereRespawn;
 
     private void OnEnable()
     {
@@ -54,6 +84,9 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
 
         columns = Mathf.Max(1, columns);
         spacing = Mathf.Max(0.01f, spacing);
+        moveProbability = Mathf.Clamp01(moveProbability);
+        moveDistance = Mathf.Max(0.0f, moveDistance);
+        sphereRespawnProbability = Mathf.Clamp01(sphereRespawnProbability);
         _gameObjectLayer = (byte)gameObject.layer;
 
         CreateFallbackResources();
@@ -63,11 +96,46 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
 
         // 2. 网格和材质必须先注册，绘制命令里使用的是注册后得到的 ID。
         _meshId = _brg.RegisterMesh(mesh);
+        _sphereMeshId = _brg.RegisterMesh(sphereMesh);
         _materialId = _brg.RegisterMaterial(material);
         
         //这里都是静态资源  大概意思就是准备好所有的静态资源  塞到一个大缓冲区中  然后一次性上传到 GPU
         //这里还会提交MetaData  这个类似于VAO的 偏移标记 但更方便 直接通过属性名就可以访问
         CreateInstanceBufferAndBatch();
+        CreateSphereBufferAndBatch();
+    }
+
+    private void CreateSphereBufferAndBatch()
+    {
+        int objectToWorldOffset = BufferHeaderSize;
+        int worldToObjectOffset = objectToWorldOffset + SphereCount * PackedMatrixSize;
+        int colorOffset = worldToObjectOffset + SphereCount * PackedMatrixSize;
+        int totalBufferSize = colorOffset + SphereCount * ColorSize;
+
+        _sphereInstanceBuffer = new GraphicsBuffer(
+            GraphicsBuffer.Target.Raw,
+            totalBufferSize / sizeof(int),
+            sizeof(int));
+        _sphereInstanceBuffer.name = "Simple BRG - 100 Spheres";
+
+        _sphereRawData = new int[totalBufferSize / sizeof(int)];
+        _sphereWorldBounds = new NativeArray<Bounds>(SphereCount, Allocator.Persistent);
+
+        for (int i = 0; i < SphereCount; i++)
+        {
+            SetSphereTransform(i, Matrix4x4.TRS(RandomSpherePosition(), Quaternion.identity, Vector3.one));
+            Color color = Color.HSVToRGB(i / (float)SphereCount, 0.35f, 1.0f);
+            WriteFloat4(_sphereRawData, colorOffset / sizeof(int) + i * 4, color.r, color.g, color.b, 1.0f);
+        }
+
+        _sphereInstanceBuffer.SetData(_sphereRawData);
+
+        var metadata = new NativeArray<MetadataValue>(3, Allocator.Temp);
+        metadata[0] = CreateMetadata("unity_ObjectToWorld", objectToWorldOffset);
+        metadata[1] = CreateMetadata("unity_WorldToObject", worldToObjectOffset);
+        metadata[2] = CreateMetadata("_BaseColor", colorOffset);
+        _sphereBatchId = _brg.AddBatch(metadata, _sphereInstanceBuffer.bufferHandle);
+        metadata.Dispose();
     }
 
     private void CreateInstanceBufferAndBatch()
@@ -90,33 +158,19 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
         _instanceBuffer.name = "Simple BRG - 1000 Cubes";
 
         // 先在 CPU 端组成一块连续数据，再一次上传到 GPU，代码和数据布局都更直观。
-        var rawData = new int[totalBufferSize / sizeof(int)];
-        int rows = Mathf.CeilToInt(InstanceCount / (float)columns);
+        _rawData = new int[totalBufferSize / sizeof(int)];
+        _objectToWorldMatrices = new Matrix4x4[InstanceCount];
+        _worldBounds = new NativeArray<Bounds>(InstanceCount, Allocator.Persistent);
+        InitializeInstanceTransforms();
 
         for (int i = 0; i < InstanceCount; i++)
         {
-            int x = i % columns;
-            int y = i / columns;
-
-            // 让整个 X/Y 网格以当前 GameObject 为中心，所有盒子的 Z 坐标都为 0。
-            Vector3 localPosition = new Vector3(
-                (x - (columns - 1) * 0.5f) * spacing,
-                (y - (rows - 1) * 0.5f) * spacing,
-                0.0f);
-
-            // 把进入 Play Mode 时宿主物体的变换也乘进去，方便摆放整片网格。
-            Matrix4x4 objectToWorld = transform.localToWorldMatrix
-                                      * Matrix4x4.TRS(localPosition, Quaternion.identity, Vector3.one);
-
-            WritePackedMatrix(rawData, objectToWorldOffset / sizeof(int) + i * 12, objectToWorld);
-            WritePackedMatrix(rawData, worldToObjectOffset / sizeof(int) + i * 12, objectToWorld.inverse);
-
             // 颜色不是 BRG 必需数据，只是用渐变色帮助观察 1000 个实例确实各自独立。
             Color color = Color.HSVToRGB(i / (float)InstanceCount, 0.65f, 1.0f);
-            WriteFloat4(rawData, colorOffset / sizeof(int) + i * 4, color.r, color.g, color.b, 1.0f);
+            WriteFloat4(_rawData, colorOffset / sizeof(int) + i * 4, color.r, color.g, color.b, 1.0f);
         }
 
-        _instanceBuffer.SetData(rawData);//将 数据上传 GPU
+        _instanceBuffer.SetData(_rawData);//将 数据上传 GPU
 
         // 3. Metadata 把 Shader 属性名映射到 Raw Buffer 中对应数组的起始位置。
         // 注意：这里只保存起始字节地址，Shader 会根据当前实例 ID 找到自己的那一份数据。
@@ -129,6 +183,142 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
 
         _batchId = _brg.AddBatch(metadata, _instanceBuffer.bufferHandle);
         metadata.Dispose();
+    }
+
+    private void Update()
+    {
+        if (_instanceBuffer == null || _sphereInstanceBuffer == null)
+            return;
+
+        _framesSinceMove++;
+        _framesSinceSphereRespawn++;
+
+        if (_framesSinceMove >= 30)
+        {
+            _framesSinceMove = 0;
+            Camera movementCamera = targetCamera != null ? targetCamera : Camera.main;
+            if (movementCamera != null)
+            {
+                MoveRandomInstancesToward(movementCamera.transform.position);
+                UploadMatrixData(_instanceBuffer, _rawData, InstanceCount);
+            }
+        }
+
+        if (_framesSinceSphereRespawn >= 60)
+        {
+            _framesSinceSphereRespawn = 0;
+            RespawnRandomSpheres();
+            UploadMatrixData(_sphereInstanceBuffer, _sphereRawData, SphereCount);
+        }
+    }
+
+    private static void UploadMatrixData(GraphicsBuffer buffer, int[] rawData, int instanceCount)
+    {
+        // 只重新上传两个矩阵数组，颜色数据保持不变。
+        int matrixIntCount = instanceCount * PackedMatrixSize / sizeof(int);
+        int objectToWorldStart = BufferHeaderSize / sizeof(int);
+        int worldToObjectStart = objectToWorldStart + matrixIntCount;
+        buffer.SetData(rawData, objectToWorldStart, objectToWorldStart, matrixIntCount);
+        buffer.SetData(rawData, worldToObjectStart, worldToObjectStart, matrixIntCount);
+    }
+
+    private void InitializeInstanceTransforms()
+    {
+        int rows = Mathf.CeilToInt(InstanceCount / (float)columns);
+
+        for (int i = 0; i < InstanceCount; i++)
+        {
+            int x = i % columns;
+            int y = i / columns;
+
+            Vector3 localPosition = new Vector3(
+                (x - (columns - 1) * 0.5f) * spacing,
+                (y - (rows - 1) * 0.5f) * spacing,
+                0.0f);
+            Matrix4x4 objectToWorld = transform.localToWorldMatrix
+                                      * Matrix4x4.TRS(localPosition, Quaternion.identity, Vector3.one);
+            SetInstanceTransform(i, objectToWorld);
+        }
+    }
+
+    private void MoveRandomInstancesToward(Vector3 targetPosition)
+    {
+        for (int i = 0; i < InstanceCount; i++)
+        {
+            if (UnityEngine.Random.value > moveProbability)
+                continue;
+
+            Matrix4x4 objectToWorld = _objectToWorldMatrices[i];
+            Vector3 position = objectToWorld.GetColumn(3);
+            Vector3 direction = targetPosition - position;
+            if (direction.sqrMagnitude <= Mathf.Epsilon)
+                continue;
+
+            Vector3 movement = direction.normalized * moveDistance;
+            objectToWorld.m03 += movement.x;
+            objectToWorld.m13 += movement.y;
+            objectToWorld.m23 += movement.z;
+            SetInstanceTransform(i, objectToWorld);
+        }
+    }
+
+    private void SetInstanceTransform(int instanceIndex, Matrix4x4 objectToWorld)
+    {
+        int objectToWorldOffset = BufferHeaderSize / sizeof(int);
+        int worldToObjectOffset = objectToWorldOffset + InstanceCount * 12;
+
+        _objectToWorldMatrices[instanceIndex] = objectToWorld;
+        WritePackedMatrix(_rawData, objectToWorldOffset + instanceIndex * 12, objectToWorld);
+        WritePackedMatrix(_rawData, worldToObjectOffset + instanceIndex * 12, objectToWorld.inverse);
+
+        _worldBounds[instanceIndex] = TransformBounds(mesh.bounds, objectToWorld);
+    }
+
+    private void RespawnRandomSpheres()
+    {
+        for (int i = 0; i < SphereCount; i++)
+        {
+            if (UnityEngine.Random.value > sphereRespawnProbability)
+                continue;
+
+            // BRG 实例不是 GameObject；覆盖这个槽位的矩阵就等价于销毁旧实例并在新位置创建。
+            SetSphereTransform(i, Matrix4x4.TRS(RandomSpherePosition(), Quaternion.identity, Vector3.one));
+        }
+    }
+
+    private static Vector3 RandomSpherePosition()
+    {
+        return new Vector3(
+            UnityEngine.Random.Range(0.0f, SpherePositionMax),
+            UnityEngine.Random.Range(0.0f, SpherePositionMax),
+            UnityEngine.Random.Range(0.0f, SpherePositionMax));
+    }
+
+    private void SetSphereTransform(int instanceIndex, Matrix4x4 objectToWorld)
+    {
+        int objectToWorldOffset = BufferHeaderSize / sizeof(int);
+        int worldToObjectOffset = objectToWorldOffset + SphereCount * 12;
+
+        WritePackedMatrix(_sphereRawData, objectToWorldOffset + instanceIndex * 12, objectToWorld);
+        WritePackedMatrix(_sphereRawData, worldToObjectOffset + instanceIndex * 12, objectToWorld.inverse);
+        _sphereWorldBounds[instanceIndex] = TransformBounds(sphereMesh.bounds, objectToWorld);
+    }
+
+    private static Bounds TransformBounds(Bounds localBounds, Matrix4x4 objectToWorld)
+    {
+        Vector3 localExtents = localBounds.extents;
+        Vector3 worldCenter = objectToWorld.MultiplyPoint3x4(localBounds.center);
+        Vector3 worldExtents = new Vector3(
+            Mathf.Abs(objectToWorld.m00) * localExtents.x
+            + Mathf.Abs(objectToWorld.m01) * localExtents.y
+            + Mathf.Abs(objectToWorld.m02) * localExtents.z,
+            Mathf.Abs(objectToWorld.m10) * localExtents.x
+            + Mathf.Abs(objectToWorld.m11) * localExtents.y
+            + Mathf.Abs(objectToWorld.m12) * localExtents.z,
+            Mathf.Abs(objectToWorld.m20) * localExtents.x
+            + Mathf.Abs(objectToWorld.m21) * localExtents.y
+            + Mathf.Abs(objectToWorld.m22) * localExtents.z);
+        return new Bounds(worldCenter, worldExtents * 2.0f);
     }
 
     private static MetadataValue CreateMetadata(string propertyName, int byteOffset)
@@ -176,7 +366,7 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
     }
 
     /// <summary>
-    /// Unity 调用的剔除回调。为了保持示例最简单，这里不做视锥剔除，直接报告 1000 个实例都可见。
+    /// Unity 调用的剔除回调，只把与当前相机视锥相交的实例报告为可见。
     /// </summary>
     private JobHandle OnPerformCulling(
         BatchRendererGroup rendererGroup,
@@ -186,22 +376,22 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
     {
         var output = new BatchCullingOutputDrawCommands
         {
-            drawCommandCount = 1,
+            drawCommandCount = 2,
             drawRangeCount = 1,
-            visibleInstanceCount = InstanceCount,
-            drawCommands = Allocate<BatchDrawCommand>(1),
+            visibleInstanceCount = 0,
+            drawCommands = Allocate<BatchDrawCommand>(2),
             drawRanges = Allocate<BatchDrawRange>(1),
-            visibleInstances = Allocate<int>(InstanceCount),
+            visibleInstances = Allocate<int>(InstanceCount + SphereCount),
             drawCommandPickingInstanceIDs = null,
             instanceSortingPositions = null,
             instanceSortingPositionFloatCount = 0
         };
 
-        // 5. 一条 DrawCommand 就可以让同一个 Mesh + Material 绘制 1000 个实例。
+        // Cube 和 Sphere 使用不同 Mesh / Batch，所以各自需要一条 DrawCommand。
         output.drawCommands[0] = new BatchDrawCommand
         {
             visibleOffset = 0,
-            visibleCount = InstanceCount,
+            visibleCount = 0,
             batchID = _batchId,
             materialID = _materialId,
             meshID = _meshId,
@@ -211,10 +401,23 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
             sortingPosition = 0
         };
 
+        output.drawCommands[1] = new BatchDrawCommand
+        {
+            visibleOffset = 0,
+            visibleCount = 0,
+            batchID = _sphereBatchId,
+            materialID = _materialId,
+            meshID = _sphereMeshId,
+            submeshIndex = 0,
+            splitVisibilityMask = 0xff,
+            flags = BatchDrawCommandFlags.None,
+            sortingPosition = 0
+        };
+
         output.drawRanges[0] = new BatchDrawRange
         {
             drawCommandsBegin = 0,
-            drawCommandsCount = 1,
+            drawCommandsCount = 2,
             filterSettings = new BatchFilterSettings
             {
                 renderingLayerMask = uint.MaxValue,
@@ -226,14 +429,52 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
             }
         };
 
-        // visibleInstances 存的是“可见实例索引”。实际项目通常在这里写入视锥剔除后的结果。
+        // visibleInstances 只写入通过所有视锥平面测试的实例索引。
+        int cubeVisibleCount = 0;
         for (int i = 0; i < InstanceCount; i++)
-            output.visibleInstances[i] = i;
+        {
+            if (IsVisible(_worldBounds[i], cullingContext.cullingPlanes))
+                output.visibleInstances[cubeVisibleCount++] = i;
+        }
+
+        int sphereVisibleOffset = cubeVisibleCount;
+        int sphereVisibleCount = 0;
+        for (int i = 0; i < SphereCount; i++)
+        {
+            if (IsVisible(_sphereWorldBounds[i], cullingContext.cullingPlanes))
+                output.visibleInstances[sphereVisibleOffset + sphereVisibleCount++] = i;
+        }
+
+        output.visibleInstanceCount = cubeVisibleCount + sphereVisibleCount;
+        output.drawCommands[0].visibleCount = (uint)cubeVisibleCount;
+        output.drawCommands[1].visibleOffset = (uint)sphereVisibleOffset;
+        output.drawCommands[1].visibleCount = (uint)sphereVisibleCount;
 
         cullingOutput.drawCommands[0] = output;
 
         // 本例没有调度 Job，所以返回空 JobHandle。
         return default;
+    }
+
+    private static bool IsVisible(Bounds bounds, NativeArray<Plane> cullingPlanes)
+    {
+        Vector3 center = bounds.center;
+        Vector3 extents = bounds.extents;
+
+        for (int i = 0; i < cullingPlanes.Length; i++)
+        {
+            Plane plane = cullingPlanes[i];
+            Vector3 normal = plane.normal;
+            float projectedRadius = Mathf.Abs(normal.x) * extents.x
+                                    + Mathf.Abs(normal.y) * extents.y
+                                    + Mathf.Abs(normal.z) * extents.z;
+
+            // 包围盒完全位于任一平面的外侧时，即可立即剔除。
+            if (plane.GetDistanceToPoint(center) + projectedRadius < 0.0f)
+                return false;
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -260,6 +501,16 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
             mesh = _runtimeMesh;
         }
 
+        if (sphereMesh == null)
+        {
+            GameObject temporarySphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            temporarySphere.SetActive(false);
+            _runtimeSphereMesh = Instantiate(temporarySphere.GetComponent<MeshFilter>().sharedMesh);
+            _runtimeSphereMesh.name = "Simple BRG Runtime Sphere";
+            Destroy(temporarySphere);
+            sphereMesh = _runtimeSphereMesh;
+        }
+
         if (material == null)
         {
             Shader shader = Shader.Find("Learning/Simple BRG Unlit");
@@ -280,13 +531,27 @@ public unsafe sealed class SimpleBRGExample : MonoBehaviour
         
         _instanceBuffer?.Dispose();
         _instanceBuffer = null;
+        _sphereInstanceBuffer?.Dispose();
+        _sphereInstanceBuffer = null;
+        _rawData = null;
+        _sphereRawData = null;
+        _objectToWorldMatrices = null;
+        if (_worldBounds.IsCreated)
+            _worldBounds.Dispose();
+        if (_sphereWorldBounds.IsCreated)
+            _sphereWorldBounds.Dispose();
+        _framesSinceMove = 0;
+        _framesSinceSphereRespawn = 0;
         
         if (_runtimeMaterial != null)
             Destroy(_runtimeMaterial);
         if (_runtimeMesh != null)
             Destroy(_runtimeMesh);
+        if (_runtimeSphereMesh != null)
+            Destroy(_runtimeSphereMesh);
         
         _runtimeMaterial = null;
         _runtimeMesh = null;
+        _runtimeSphereMesh = null;
     }
 }
