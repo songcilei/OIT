@@ -42,7 +42,8 @@ public class BatchBufferInfo
         Attrs.Add(new InstanceAttr()
         {
             trans = objInfo.trans,
-            index = maxCount
+            index = maxCount,
+            bounds = objInfo.mesh.bounds
         });
         return maxCount;
     }
@@ -62,7 +63,14 @@ public class BatchBufferInfo
 
 public class InstanceAttr
 {
-    public Matrix4x4 object2World;
+    // public Matrix4x4 object2World;
+    public Bounds bounds;
+    public Bounds worldBound
+    {
+        get { bounds.center = trans.position; 
+               bounds.size = trans.lossyScale;
+                return bounds; }
+    }
     public Transform trans;
     public int index;
 }
@@ -262,10 +270,27 @@ public unsafe class BRGManager : MonoBehaviour
         
         for (int i = 0; i < _bufferInfoList.Count; i++)
         {
+
+            
+            //这里其实是要写剔除的主函数
+            int batchVisibleCount = 0;
+            for (int j = 0; j < _bufferInfoList[i].maxCount; j++)
+            {
+                var info = _bufferInfoList[i].Attrs[j];
+                //检测是否可见
+                if (IsVisible(info.worldBound, cullingContext.cullingPlanes))
+                {
+                    output.visibleInstances[j+visibleOffset] = j;
+                    batchVisibleCount++;
+                }
+
+            }
+            
+            
             output.drawCommands[i] = new BatchDrawCommand
             {
                 visibleOffset = (uint)visibleOffset,
-                visibleCount = (uint)_bufferInfoList[i].maxCount,
+                visibleCount = (uint)batchVisibleCount,
                 batchID = _bufferInfoList[i].BatchID,
                 materialID = _bufferInfoList[i].batchMaterialID,
                 meshID = _bufferInfoList[i].BatchMeshID,
@@ -275,14 +300,16 @@ public unsafe class BRGManager : MonoBehaviour
                 sortingPosition = 0
             };
             
-            //这里其实是要写剔除的主函数
-            for (int j = 0; j < _bufferInfoList[i].maxCount; j++)
-            {
-                output.visibleInstances[j+visibleOffset] = j;
-            }
+            // for (int j = 0; j < _bufferInfoList[i].maxCount; j++)
+            // {
+            //     output.visibleInstances[j+visibleOffset] = j;
+            // }
 
-            visibleOffset += _bufferInfoList[i].maxCount;
+            visibleOffset += batchVisibleCount;
         }
+        
+        // 5. 提交真正可见的实例数量。
+        output.visibleInstanceCount = visibleOffset;
         cullingOutput.drawCommands[0] = output;
 
 
@@ -304,7 +331,10 @@ public unsafe class BRGManager : MonoBehaviour
 
     public void Remove(int bufferIndex,int AttrIndex)
     {
-        _bufferInfoList[bufferIndex].removeElement(AttrIndex);
+        if (_bufferInfoList.Count>0)
+        {
+            _bufferInfoList[bufferIndex].removeElement(AttrIndex);
+        }
     }
 
     private void OnDisable()
@@ -317,7 +347,7 @@ public unsafe class BRGManager : MonoBehaviour
         _bufferInfoList.Clear();
     }
     
-    
+    //可视化检测
     private static bool IsVisible(
         Bounds bounds,
         NativeArray<Plane> planes)
