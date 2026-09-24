@@ -31,16 +31,17 @@ public class BatchBufferInfo
         }
     }
 
-    public int AddElement(Transform _trans)
+    public int AddElement(BrgObjInfo objInfo)
     {
         if (Attrs == null)
         {
             Attrs = new List<InstanceAttr>();
         }
 
+        objInfo.attrIndex = maxCount;
         Attrs.Add(new InstanceAttr()
         {
-            trans = _trans,
+            trans = objInfo.trans,
             index = maxCount
         });
         return maxCount;
@@ -53,6 +54,7 @@ public class BatchBufferInfo
             if (index == Attrs[i].index)
             {
                 Attrs.RemoveAt(i);
+                return;
             }
         }
     }
@@ -103,10 +105,17 @@ public unsafe class BRGManager : MonoBehaviour
             
             for (int i = 0; i < _bufferInfoList.Count; i++)
             {
+                //越界判断 最大支持256
+                if (_bufferInfoList[i].maxCount >= maxCount)
+                {
+                    Debug.LogError("当前 Batch 已达到容量上限");
+                    return;
+                }
                 if (objInfo.material == _bufferInfoList[i].material && objInfo.mesh == _bufferInfoList[i].mesh)
                 {
                     objInfo._batchInfo = _bufferInfoList[i];
-                    _bufferInfoList[i].AddElement(objInfo.trans);
+                    objInfo.bufferInfoIndex = i;
+                    _bufferInfoList[i].AddElement(objInfo);
                     return;
                 }
             }
@@ -128,7 +137,7 @@ public unsafe class BRGManager : MonoBehaviour
         //batch 
         batchInfo.batchMaterialID = _brg.RegisterMaterial(batchInfo.material);
         batchInfo.BatchMeshID =  _brg.RegisterMesh(batchInfo.mesh);
-        batchInfo.AddElement(objInfo.trans);
+        batchInfo.AddElement(objInfo);
         //创建buffer 相关 并绑定到 brg
         batchInfo.buffer = new GraphicsBuffer(GraphicsBuffer.Target.Raw, totalOffset / sizeof(int), sizeof(int));
  
@@ -151,6 +160,12 @@ public unsafe class BRGManager : MonoBehaviour
         {
             for (int j = 0; j < _bufferInfoList[i].maxCount; j++)
             {
+                //如果transform没有改变 则不进行重新赋值上传
+                if (!_bufferInfoList[i].Attrs[j].trans.hasChanged)
+                {
+                    continue;
+                }
+                
                 Matrix4x4 matrix = _bufferInfoList[i].Attrs[j].trans.localToWorldMatrix;
                 int offset = j *12+_bufferInfoList[i].object2worldOffset/sizeof(int) ;
                 ZwriteMatrix2Raw(_bufferInfoList[i].rawData,matrix,offset);
@@ -162,7 +177,6 @@ public unsafe class BRGManager : MonoBehaviour
             }
             _bufferInfoList[i].buffer.SetData(_bufferInfoList[i].rawData);
         }
-        
     }
 
     private void ZwriteMatrix2Raw(int[] rawData,Matrix4x4 matrix,int offset)
@@ -260,6 +274,8 @@ public unsafe class BRGManager : MonoBehaviour
                 flags = BatchDrawCommandFlags.None,
                 sortingPosition = 0
             };
+            
+            //这里其实是要写剔除的主函数
             for (int j = 0; j < _bufferInfoList[i].maxCount; j++)
             {
                 output.visibleInstances[j+visibleOffset] = j;
@@ -286,6 +302,11 @@ public unsafe class BRGManager : MonoBehaviour
         );
     }
 
+    public void Remove(int bufferIndex,int AttrIndex)
+    {
+        _bufferInfoList[bufferIndex].removeElement(AttrIndex);
+    }
+
     private void OnDisable()
     {
         _brg?.Dispose();
@@ -294,5 +315,32 @@ public unsafe class BRGManager : MonoBehaviour
             bufferInfo.buffer.Dispose();
         }
         _bufferInfoList.Clear();
+    }
+    
+    
+    private static bool IsVisible(
+        Bounds bounds,
+        NativeArray<Plane> planes)
+    {
+        Vector3 center = bounds.center;
+        Vector3 extents = bounds.extents;
+
+        for (int i = 0; i < planes.Length; i++)
+        {
+            Plane plane = planes[i];
+            Vector3 normal = plane.normal;
+
+            float projectedRadius =
+                Mathf.Abs(normal.x) * extents.x +
+                Mathf.Abs(normal.y) * extents.y +
+                Mathf.Abs(normal.z) * extents.z;
+
+            if (plane.GetDistanceToPoint(center) + projectedRadius < 0.0f)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

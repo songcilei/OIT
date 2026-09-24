@@ -11,4 +11,6 @@ public class BrgObjInfo
     public Mesh mesh;
     public Material material;
     public Transform trans;
+    public int bufferInfoIndex;
+    public int attrIndex;
 }
