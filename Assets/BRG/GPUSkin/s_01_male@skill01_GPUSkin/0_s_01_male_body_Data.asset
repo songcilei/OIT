@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd18f4d7b976021468033b422859d764, type: 3}
+  m_Name: 0_s_01_male_body_Data
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 4300000, guid: a1b5f6a401649304c8c9605dd5081a0d, type: 2}
+  animationTexture: {fileID: 2800000, guid: 6e74e0a2373ba2241b583eca80c9ea44, type: 2}
+  boneCount: 51
+  textureWidth: 153
+  textureHeight: 50
+  bakedBounds:
+    m_Center: {x: -0.003948748, y: 0.737042, z: 0.27810824}
+    m_Extent: {x: 0.9482738, y: 0.916837, z: 1.1698782}
+  clips:
+  - name: skill01
+    startFrame: 0
+    frameCount: 50
+    frameRate: 30
+    duration: 1.6000001
+    loop: 0

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd18f4d7b976021468033b422859d764, type: 3}
+  m_Name: 4_w_gun_lv6_Data
+  m_EditorClassIdentifier: 
+  mesh: {fileID: 4300000, guid: f5d0d88f2b2b0f9478e8dd3358ba4138, type: 2}
+  animationTexture: {fileID: 2800000, guid: 30222d90fb00363499a1a1b68f215c5b, type: 2}
+  boneCount: 3
+  textureWidth: 9
+  textureHeight: 50
+  bakedBounds:
+    m_Center: {x: 0.11594486, y: 1.4682349, z: -0.28267407}
+    m_Extent: {x: 1.7511821, y: 1.2874552, z: 2.4595735}
+  clips:
+  - name: skill01
+    startFrame: 0
+    frameCount: 50
+    frameRate: 30
+    duration: 1.6000001
+    loop: 0
