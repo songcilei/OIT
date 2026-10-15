@@ -13,7 +13,7 @@ ModelImporter:
     legacyGenerateAnimations: 4
     bakeSimulation: 0
     resampleCurves: 1
-    optimizeGameObjects: 1
+    optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
     rigImportErrors: 
@@ -80,7 +80,6 @@ ModelImporter:
   referencedClips:
   - 54747b14130a49140b5462311cc8ecf6
   - 90025410d60676448adc47cf386198a0
-  - 099b1ac6ef4740146906c653c5eac354
   - 35d77c166f392b246a8a1d2b47d1be51
   - 673ce50049e1b064f87db8f4f7543221
   - 5febc735e883ef64099a91d758c3ab07
