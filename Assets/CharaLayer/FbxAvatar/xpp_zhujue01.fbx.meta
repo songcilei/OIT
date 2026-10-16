@@ -57,7 +57,7 @@ ModelImporter:
     skinWeightsMode: 1
     maxBonesPerVertex: 2
     minBoneWeight: 0.001
-    optimizeBones: 1
+    optimizeBones: 0
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
@@ -78,6 +78,7 @@ ModelImporter:
     blendShapeNormalImportMode: 1
     normalSmoothingSource: 0
   referencedClips:
+  - ee658f9b0c248814cb317d435af0219e
   - 54747b14130a49140b5462311cc8ecf6
   - 90025410d60676448adc47cf386198a0
   - 35d77c166f392b246a8a1d2b47d1be51
@@ -90,9 +91,6 @@ ModelImporter:
   - add109875b6cd7e4498f320315e498ee
   - 2ab88d8b9821a6746914b2f5debb388c
   - 3c1ea000d4c1b384ca24fcebb728e6e9
-  - b20cc04c55e792442bfc3859efa2993e
-  - 473c31d85b45ffd44824763c1bb7b805
-  - c41ec8bfb0a4d3e47815ccb07894bde7
   - 7cbf4f480688259438286d339c352511
   - b07cf08b5e07d5646ac523637cda9ed5
   - 56515e0c2ee223745bb1f68ebf17f657
