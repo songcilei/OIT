@@ -79,7 +79,6 @@ public class AntimaCtl : MonoBehaviour
 
         // 记录已知参考姿势，不假设当前动画骨架处于 T-Pose
         referenceHipsLocalRotation = hips.localRotation;
-        Debug.Log(referenceHipsLocalRotation.eulerAngles);
     }
 
     private void Update()
