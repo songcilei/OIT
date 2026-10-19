@@ -1,8 +1,7 @@
 using System;
+using DG.DemiLib;
 using UnityEngine;
-
-
-
+using UnityEngine.InputSystem.iOS;
 
 
 [RequireComponent(typeof(Animator),typeof(AnimaCoreLogic))]
@@ -81,7 +80,14 @@ public class AntimaCtl : MonoBehaviour
 //atk
         if (Input.GetButtonDown("Fire1"))
         {
-            _animaCoreLogic.PlayAtk();
+            if (_animaCoreLogic.DebugMode)
+            {
+                _animaCoreLogic.PlayAtk(Vector3.zero);
+            }
+            else
+            {
+                _animaCoreLogic.PlayAtk();
+            }
             _animaCoreLogic.SetHalfAnimaMode(true);
             _animaState = AnimaState.Atk;
             _delayTimeState = DelayTimeState.AtkDelay;
@@ -142,6 +148,7 @@ public class AntimaCtl : MonoBehaviour
                     _delayTimeState = DelayTimeState.None;
                     _animaState = AnimaState.Idle;
                     _animaCoreLogic.SetHalfAnimaMode(false);
+                    _animaCoreLogic.SetGunIKMode(false, Vector3.zero);
                     delayTime = 0;
                 }
                 break;
@@ -158,7 +165,7 @@ public class AntimaCtl : MonoBehaviour
         transform.Translate(dir.normalized * MoveSpeed*speed * Time.deltaTime, Space.World);
     }
 
-
+    
     private void OnGUI()
     {
         if (GUILayout.Button("死亡 测试 ",GUILayout.Width(200),GUILayout.Height(100)))

@@ -25,13 +25,23 @@ public class AnimaCoreLogic : MonoBehaviour
     public float compensationWeight = 1f;
 
     public int compensationLayer = 1;
-    public Transform debugObject;
+
 
     public float LeftHandIK = 1;
     public float RightHandIK = 1;
+
+    public Transform GunRootNode;
+
+    public bool DebugMode=false;
+    public Transform debugObject;
+    
     
     private Transform hips;
     private Transform spine;
+
+    //gun ik 
+    private bool GunIKMode = false;
+    private Vector3 IkTargetPosition = Vector3.zero;
 
     private Quaternion referenceHipsLocalRotation;
     private bool EnableHalfMode = false;
@@ -44,8 +54,9 @@ public class AnimaCoreLogic : MonoBehaviour
     private static readonly int DeathId = Animator.StringToHash("Death");
     private static readonly int ReloadId = Animator.StringToHash("Reload");
     private static readonly int Skill01EndId = Animator.StringToHash("Skill01End");
-
     private Animator _animator;
+    
+    
 
     private void Start()
     {
@@ -59,7 +70,6 @@ public class AnimaCoreLogic : MonoBehaviour
 
         hips = _animator.GetBoneTransform(HumanBodyBones.Hips);
         spine = _animator.GetBoneTransform(HumanBodyBones.Spine);
-
         if (hips == null || spine == null || spine.parent != hips)
         {
             Debug.LogError(
@@ -77,6 +87,12 @@ public class AnimaCoreLogic : MonoBehaviour
     public void PlayAtk()
     {
         _animator.SetTrigger(FireId);
+    }
+
+    public void PlayAtk(Vector3 lookat)
+    {
+        _animator.SetTrigger(FireId);
+        SetGunIKMode(true,lookat);
     }
 
 
@@ -122,6 +138,12 @@ public class AnimaCoreLogic : MonoBehaviour
         _animator.SetLayerWeight(1,state?1:0);
         EnableHalfMode = state;
     }
+
+    public void SetGunIKMode(bool state,Vector3 targetPos)
+    {
+        IkTargetPosition = targetPos;
+        GunIKMode = state;
+    }
     
     private void OnAnimatorIK(int layerIndex)
     {
@@ -131,14 +153,13 @@ public class AnimaCoreLogic : MonoBehaviour
             return;
         }
         
-        _animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, LeftHandIK);
-        _animator.SetIKPositionWeight(AvatarIKGoal.RightHand, RightHandIK);
-        
+        // _animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, LeftHandIK);
+        // _animator.SetIKPositionWeight(AvatarIKGoal.RightHand, RightHandIK);
+        //
         
         //尝试修复  半身动画公用骨骼导致的旋转错误
         if (EnableHalfMode)
         {
-            Debug.Log("11111111111");
             // 在同一次回调中读取当前姿势
             Quaternion currentHips = hips.localRotation;
             Quaternion currentSpine = spine.localRotation;
@@ -155,10 +176,37 @@ public class AnimaCoreLogic : MonoBehaviour
                 HumanBodyBones.Spine,
                 correction * currentSpine);
 
-            // 如果目的是显示骨盆实际朝向，使用世界旋转
-            if (debugObject != null)
-                debugObject.rotation = hips.rotation;
+            
+            //目标瞄准IK
+            if (GunIKMode)
+            {
+                Vector3 lookAtPosition = IkTargetPosition;
+                if (DebugMode)
+                    lookAtPosition = debugObject.position;
+                Vector3 LookDir = lookAtPosition - spine.position;
+                Quaternion lookAtRotation =referenceHipsLocalRotation*Quaternion.LookRotation(LookDir);
+
+                var spineTran = _animator.GetBoneTransform(HumanBodyBones.Spine);
+                
+                _animator.SetBoneLocalRotation(HumanBodyBones.Spine,lookAtRotation*spineTran.rotation);
+                
+
+            }
         }
     }
-    
+
+    public void LateUpdate()
+    {
+        if (GunRootNode != null && GunIKMode)
+        {
+            Vector3 lookAtPosition = IkTargetPosition;
+            if (DebugMode)
+                lookAtPosition = debugObject.position;
+            Vector3 LookDir = lookAtPosition - spine.position;
+            //Gun
+            Quaternion LookAtGunRotation = Quaternion.FromToRotation(-GunRootNode.right,  LookDir);
+            GunRootNode.rotation =LookAtGunRotation* GunRootNode.rotation;
+        }
+
+    }
 }
