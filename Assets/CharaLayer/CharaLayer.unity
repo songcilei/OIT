@@ -845,21 +845,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1497649861}
     m_Modifications:
-    - target: {fileID: 1480800690358966545, guid: 130e04fb7722cbe4e8981bfd91c0e392,
-        type: 3}
-      propertyPath: LeftHandIK
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 1480800690358966545, guid: 130e04fb7722cbe4e8981bfd91c0e392,
-        type: 3}
-      propertyPath: RightHandIK
-      value: 5
-      objectReference: {fileID: 0}
-    - target: {fileID: 4254042627778542446, guid: 130e04fb7722cbe4e8981bfd91c0e392,
-        type: 3}
-      propertyPath: AtkDelayTime
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 5079323288069677246, guid: 130e04fb7722cbe4e8981bfd91c0e392,
         type: 3}
       propertyPath: m_LocalPosition.x

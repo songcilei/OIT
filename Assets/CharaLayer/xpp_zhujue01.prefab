@@ -96,6 +96,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 4254042627778542446}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 8f68e85c20dc8584b9de2e45a34156ee,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1480800690358966545}
   m_SourcePrefab: {fileID: 100100000, guid: 8f68e85c20dc8584b9de2e45a34156ee, type: 3}
 --- !u!1 &5563829221835635204 stripped
 GameObject:
@@ -117,8 +121,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   MoveSpeed: 6
   FastChange: 0
-  debugObject: {fileID: 0}
+  AtkDelayTime: 1
+  Skill01AtkDelayTime: 1
+  Skill01RockDelayTime: 1
+  _animaState: 0
+--- !u!114 &1480800690358966545
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5563829221835635204}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a5d41df593345041b00452ed568892b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
   compensationWeight: 1
   compensationLayer: 1
-  Skill01DelayTime: 1.5
-  _animaState: 0
+  debugObject: {fileID: 0}
+  LeftHandIK: 5
+  RightHandIK: 5

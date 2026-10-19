@@ -138,6 +138,7 @@ public class AnimaCoreLogic : MonoBehaviour
         //尝试修复  半身动画公用骨骼导致的旋转错误
         if (EnableHalfMode)
         {
+            Debug.Log("11111111111");
             // 在同一次回调中读取当前姿势
             Quaternion currentHips = hips.localRotation;
             Quaternion currentSpine = spine.localRotation;

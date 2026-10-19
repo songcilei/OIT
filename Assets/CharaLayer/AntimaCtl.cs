@@ -106,8 +106,8 @@ public class AntimaCtl : MonoBehaviour
     {
         if (_animaState != AnimaState.Atk)//这里是因为放在技能的时候可能尚未中断就触发攻击
         {
-            animator.SetLayerWeight(1,0);
             _animaState = AnimaState.Idle;
+            _animaCoreLogic.SetHalfAnimaMode(false);
         }
     }
 
@@ -141,7 +141,7 @@ public class AntimaCtl : MonoBehaviour
                 {
                     _delayTimeState = DelayTimeState.None;
                     _animaState = AnimaState.Idle;
-                    animator.SetLayerWeight(1,0);
+                    _animaCoreLogic.SetHalfAnimaMode(false);
                     delayTime = 0;
                 }
                 break;

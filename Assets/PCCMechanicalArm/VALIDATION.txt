@@ -1,0 +1,37 @@
+Validation environment
+======================
+Unity Editor 2022.3.62f3 (Windows), actual Unity assemblies and Play Mode.
+GPU in local test: NVIDIA GeForce RTX 3080.
+These are correctness tests, NOT WeChat device performance results.
+
+Numerical and mesh checks
+------------------------
+PASS analytic straight/quarter-circle/small-curvature tests
+IK target (1.200, 0.700, 2.800) error=0.004904
+IK target (-1.500, 0.400, 2.500) error=0.001832
+IK target (0.200, 1.700, 2.500) error=0.000162
+IK target (0.200, 0.200, 4.400) error=0.003442
+IK target (0.100, 0.100, 1.100) error=0.004586
+IK target (-0.800, -0.500, 2.700) error=0.001799
+IK target (0.000, 0.000, 4.700) error=0.002772
+Moving target (20s simulated): peak error=0.01000, mean=0.00190
+PASS unreachable target remains finite and bounded
+PASS extension lock
+Straight/minimum-length singularity recovery error=0.004229842
+PASS procedural mesh indices, winding, normals and bounds; vertices=2464
+PASS generated demo scene and material assets
+ALL PASS: 14616 assertions. Unity 2022.3.62f3
+
+Actual Play Mode and render capture
+----------------------------------
+Unity 2022.3.62f3 Play Mode PASS
+Frames=390, captures=73, peak post-warmup tip error=0.009881038
+Enable/disable rebuild PASS. Graphics device=NVIDIA GeForce RTX 3080
+
+No Error/Exception log entries during the runtime capture.
+Runtime preview was rendered by the generated Unity scene; not an AI mockup.
+The 20-second moving-target test excludes its first 121 frames from peak/mean statistics.
+Play Mode peak error excludes the first 90 frames.
+All distances use default unit scale; they are not measured physical accuracy.
+No WebGL/WeChat build or phone test has been run.
+
