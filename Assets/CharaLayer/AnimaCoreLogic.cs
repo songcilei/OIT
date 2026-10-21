@@ -84,11 +84,18 @@ public class AnimaCoreLogic : MonoBehaviour
         referenceHipsLocalRotation = hips.localRotation;
     }
 
+    /// <summary>
+    /// 攻击
+    /// </summary>
     public void PlayAtk()
     {
         _animator.SetTrigger(FireId);
     }
 
+    /// <summary>
+    /// 带有半身转向的攻击
+    /// </summary>
+    /// <param name="lookat"></param>
     public void PlayAtk(Vector3 lookat)
     {
         _animator.SetTrigger(FireId);
@@ -197,16 +204,16 @@ public class AnimaCoreLogic : MonoBehaviour
 
     public void LateUpdate()
     {
-        if (GunRootNode != null && GunIKMode)
-        {
-            Vector3 lookAtPosition = IkTargetPosition;
-            if (DebugMode)
-                lookAtPosition = debugObject.position;
-            Vector3 LookDir = lookAtPosition - spine.position;
-            //Gun
-            Quaternion LookAtGunRotation = Quaternion.FromToRotation(-GunRootNode.right,  LookDir);
-            GunRootNode.rotation =LookAtGunRotation* GunRootNode.rotation;
-        }
+        // if (GunRootNode != null && GunIKMode)
+        // {
+        //     Vector3 lookAtPosition = IkTargetPosition;
+        //     if (DebugMode)
+        //         lookAtPosition = debugObject.position;
+        //     Vector3 LookDir = lookAtPosition - spine.position;
+        //     //Gun
+        //     Quaternion LookAtGunRotation = Quaternion.FromToRotation(-GunRootNode.right,  LookDir);
+        //     GunRootNode.rotation =LookAtGunRotation* GunRootNode.rotation;
+        // }
 
     }
 }

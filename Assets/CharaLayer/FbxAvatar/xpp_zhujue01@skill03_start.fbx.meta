@@ -125,14 +125,14 @@ ModelImporter:
         weight: 1
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger0
-        weight: 0
+        weight: 1
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger0/Bip001 L Finger01
-        weight: 0
+        weight: 1
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger0/Bip001 L Finger01/Bip001
           L Finger0Nub
-        weight: 0
+        weight: 1
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger1
         weight: 1
@@ -142,7 +142,7 @@ ModelImporter:
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger1/Bip001 L Finger11/Bip001
           L Finger1Nub
-        weight: 0
+        weight: 1
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger2
         weight: 1
@@ -152,23 +152,23 @@ ModelImporter:
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger2/Bip001 L Finger21/Bip001
           L Finger2Nub
-        weight: 0
+        weight: 1
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger3
-        weight: 1
+        weight: 0
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger3/Bip001 L Finger31
-        weight: 1
+        weight: 0
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger3/Bip001 L Finger31/Bip001
           L Finger3Nub
         weight: 0
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger4
-        weight: 1
+        weight: 0
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger4/Bip001 L Finger41
-        weight: 1
+        weight: 0
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 L Clavicle/Bip001
           L UpperArm/Bip001 L Forearm/Bip001 L Hand/Bip001 L Finger4/Bip001 L Finger41/Bip001
           L Finger4Nub
@@ -258,6 +258,15 @@ ModelImporter:
           R Finger4Nub
         weight: 0
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 R Clavicle/Bip001
+          R UpperArm/Bip001 R Forearm/Bip001 R Hand/Bone009
+        weight: 1
+      - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 R Clavicle/Bip001
+          R UpperArm/Bip001 R Forearm/Bip001 R Hand/Bone009/Bone010
+        weight: 1
+      - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 R Clavicle/Bip001
+          R UpperArm/Bip001 R Forearm/Bip001 R Hand/Bone009/Point_Fx
+        weight: 1
+      - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 R Clavicle/Bip001
           R UpperArm/Bip001 R Forearm/Bip001 R Hand/Point_Hand_R
         weight: 1
       - path: Root/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 R Clavicle/Bip001
@@ -302,12 +311,6 @@ ModelImporter:
       - path: Root/Bip001/Bip001 Pelvis/Bone005(mirrored)/Bone006(mirrored)/Bone007(mirrored)
         weight: 1
       - path: Root/Bip001/Bip001 Pelvis/Bone005(mirrored)/Bone006(mirrored)/Bone007(mirrored)/Bone008(mirrored)
-        weight: 1
-      - path: Root/Bone009
-        weight: 1
-      - path: Root/Bone009/Bone010
-        weight: 1
-      - path: Root/Bone009/Point_Fx
         weight: 1
       - path: Root/Point_Hp
         weight: 1
