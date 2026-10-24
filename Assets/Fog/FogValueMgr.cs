@@ -17,10 +17,13 @@ public class FogValueMgr : MonoBehaviour
     public float FadeSpeed = 0.1f;
     private float[,] fogMap;
     public Texture2D tex;
-    private Vector2[] _heroPos;
+    public Vector2[] _heroPos;
     private int2 _gridSize;
-    private bool FogState = false;
+    public bool FogState = false;
     public List<int2> UpdateList = new List<int2>();
+    
+    FogValueExtend fogValueExtend;
+    
     void Awake()
     {
         Instance = this;
@@ -36,6 +39,9 @@ public class FogValueMgr : MonoBehaviour
         StartPos = leftDPos;
         EndPos = rightUPos;
         Init();
+        
+        fogValueExtend = GetComponent<FogValueExtend>();
+        fogValueExtend.Init(tex);
     }
     
 
@@ -51,7 +57,6 @@ public class FogValueMgr : MonoBehaviour
         tex.filterMode = FilterMode.Bilinear;
         tex.SetPixels(new Color[_gridSize.x*_gridSize.y]);
         tex.Apply();
-        Shader.SetGlobalTexture("_MapInfo",tex);
     }
 
     /// <summary>
@@ -111,6 +116,8 @@ public class FogValueMgr : MonoBehaviour
 
         ComputeHeroRange();
         UpdateValue();
+        
+        fogValueExtend.UpdateDraw();
     }
 
 
@@ -137,6 +144,7 @@ public class FogValueMgr : MonoBehaviour
         {
             float2 heroPos = _heroPos[index];
             int2 pos = new int2(Mathf.CeilToInt(heroPos.x / Cell), Mathf.CeilToInt (heroPos.y / Cell));
+            Debug.Log(pos);
             for (int i = -FadeRange; i <= FadeRange; i++)
             {
                 for (int j = -FadeRange; j <= FadeRange; j++)
@@ -146,10 +154,13 @@ public class FogValueMgr : MonoBehaviour
                     {
                         continue;
                     }
+
                     int2 grid = new int2(i, j);
+  
                     if (pos.x+grid.x >= 0 && pos.x+grid.x < _gridSize.x && pos.y+grid.y >= 0 && pos.y+grid.y < _gridSize.y)
                     {
                         AddUpdateList(pos.x+grid.x,pos.y+grid.y);
+
                     }
                 }
             }
