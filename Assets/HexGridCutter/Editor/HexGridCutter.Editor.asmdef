@@ -1,0 +1,1 @@
+{"name":"HexGridCutter.Editor","rootNamespace":"HexGridCutter.Editor","references":["HexGridCutter.Runtime"],"includePlatforms":["Editor"]}
