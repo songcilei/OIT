@@ -8,7 +8,8 @@ public class HexCell : MonoBehaviour
 {
 
     public HexCoordinates Coordinates;
-    
+
+    public Color color;
     
     private void Awake()
     {

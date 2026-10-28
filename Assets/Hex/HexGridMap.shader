@@ -23,6 +23,7 @@ Shader "Unlit/HexGridMap"
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
+                float4 color : COLOR;
             };
 
             struct v2f
@@ -31,6 +32,7 @@ Shader "Unlit/HexGridMap"
                 UNITY_FOG_COORDS(1)
                 float4 vertex : SV_POSITION;
                 float3 worldPos : TEXCOORD2;
+                float4 color : COLOR;
             };
 
             sampler2D _MainTex;
@@ -43,6 +45,7 @@ Shader "Unlit/HexGridMap"
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
+                o.color = v.color;
                 
                 UNITY_TRANSFER_FOG(o,o.vertex);
                 return o;
@@ -52,7 +55,8 @@ Shader "Unlit/HexGridMap"
             {
                 
                 fixed4 col = tex2D(_MainTex, i.worldPos.xz/_TileOffset.xy + _TileOffset.zw);
-                
+                col *= i.color;
+
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;
             }

@@ -408,6 +408,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   width: 6
   height: 6
+  defaultColor: {r: 1, g: 1, b: 1, a: 1}
+  touchedColor: {r: 1, g: 0, b: 1, a: 1}
   cellPrefab: {fileID: 4087955435576250522, guid: e741196f43b99314499cd215ed15b1c6,
     type: 3}
   CellLabelPrefab: {fileID: 2682103188421581504, guid: 2d5d230ae15905b43a562921681a5d9a,
@@ -611,6 +613,7 @@ GameObject:
   - component: {fileID: 1851379402}
   - component: {fileID: 1851379401}
   - component: {fileID: 1851379400}
+  - component: {fileID: 1851379403}
   m_Layer: 0
   m_Name: GameObject
   m_TagString: Untagged
@@ -694,6 +697,28 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1851379398}
+  m_Mesh: {fileID: 0}
+--- !u!64 &1851379403
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1851379398}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
   m_Mesh: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
