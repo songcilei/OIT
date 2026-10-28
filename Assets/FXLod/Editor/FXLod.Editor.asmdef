@@ -1,0 +1,6 @@
+{
+  "name": "FXLod.Editor",
+  "rootNamespace": "FXLodTools.Editor",
+  "references": ["FXLod.Runtime"],
+  "includePlatforms": ["Editor"]
+}
