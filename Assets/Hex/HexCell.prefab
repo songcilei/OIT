@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 5110307831102199562}
   - component: {fileID: 4398360851959749806}
   - component: {fileID: 4087955435576250522}
-  - component: {fileID: 2461469165412661654}
   m_Layer: 0
   m_Name: HexCell
   m_TagString: Untagged
@@ -97,15 +96,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96a471d0188f5e74087fb40d1e800a22, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &2461469165412661654
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 699147501380459678}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 67d27f60709e4a17a383548d4a5d25f3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  Coordinates:
+    x: 0
+    z: 0
+  color: {r: 0, g: 0, b: 0, a: 0}

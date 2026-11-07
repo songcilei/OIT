@@ -90,8 +90,8 @@ public class AntimaCtl : MonoBehaviour
             }
             _animaCoreLogic.SetHalfAnimaMode(true);
             _animaState = AnimaState.Atk;
-            _delayTimeState = DelayTimeState.AtkDelay;
             delayTime = 0;//强制重置延迟时间
+            _delayTimeState = DelayTimeState.AtkDelay;
         }
 
         if (Input.GetButtonDown("Fire2"))

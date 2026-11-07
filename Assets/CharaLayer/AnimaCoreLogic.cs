@@ -30,6 +30,7 @@ public class AnimaCoreLogic : MonoBehaviour
     public float LeftHandIK = 1;
     public float RightHandIK = 1;
 
+    [HideInInspector]
     public Transform GunRootNode;
 
     public bool DebugMode=false;
@@ -55,9 +56,11 @@ public class AnimaCoreLogic : MonoBehaviour
     private static readonly int ReloadId = Animator.StringToHash("Reload");
     private static readonly int Skill01EndId = Animator.StringToHash("Skill01End");
     private Animator _animator;
-    
-    
 
+
+    public bool Playhalf = false;
+    public Vector3 chestAngle = new Vector3();
+    public Vector3 upChestAngle = new Vector3();
     private void Start()
     {
         _animator = this.GetComponent<Animator>();
@@ -162,14 +165,24 @@ public class AnimaCoreLogic : MonoBehaviour
         
         // _animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, LeftHandIK);
         // _animator.SetIKPositionWeight(AvatarIKGoal.RightHand, RightHandIK);
-        //
+
+
+
         
         //尝试修复  半身动画公用骨骼导致的旋转错误
         if (EnableHalfMode)
         {
+            
+            // Quaternion chest = _animator.GetBoneTransform(HumanBodyBones.Chest).localRotation;
+            // _animator.SetBoneLocalRotation(HumanBodyBones.Chest,chest*Quaternion.Euler(chestAngle));
+            //
+            // Quaternion upChest = _animator.GetBoneTransform(HumanBodyBones.UpperChest).localRotation;
+            // _animator.SetBoneLocalRotation(HumanBodyBones.UpperChest,upChest*Quaternion.Euler(upChestAngle));
+            //
             // 在同一次回调中读取当前姿势
             Quaternion currentHips = hips.localRotation;
             Quaternion currentSpine = spine.localRotation;
+
             Quaternion correction =
                 Quaternion.Inverse(currentHips)
                 * referenceHipsLocalRotation;
@@ -179,9 +192,13 @@ public class AnimaCoreLogic : MonoBehaviour
                 correction,
                 compensationWeight);
 
-            _animator.SetBoneLocalRotation(
-                HumanBodyBones.Spine,
-                correction * currentSpine);
+            if (Playhalf)
+            {
+                _animator.SetBoneLocalRotation(
+                    HumanBodyBones.Spine,
+                    correction * currentSpine);
+            }
+
 
             
             //目标瞄准IK
@@ -191,6 +208,7 @@ public class AnimaCoreLogic : MonoBehaviour
                 if (DebugMode)
                     lookAtPosition = debugObject.position;
                 Vector3 LookDir = lookAtPosition - spine.position;
+                Debug.DrawLine(spine.position, spine.position + LookDir, Color.red);
                 Quaternion lookAtRotation =referenceHipsLocalRotation*Quaternion.LookRotation(LookDir);
 
                 var spineTran = _animator.GetBoneTransform(HumanBodyBones.Spine);
@@ -201,6 +219,8 @@ public class AnimaCoreLogic : MonoBehaviour
             }
         }
     }
+
+
 
     public void LateUpdate()
     {
