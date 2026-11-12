@@ -1,5 +1,18 @@
 {
   "dependencies": {
+    "com.autodesk.fbx": {
+      "version": "4.2.1",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.local.unity-blender-live-bake": {
+      "version": "file:C:/Users/Administrator/.codex/visualizations/2026/11/09/01a1beda-34a2-7e83-923a-feb58dd87932/UnityBlenderLiveBake/dist/UnityBlenderLiveBake-v0.1.0/dist/com.local.unity-blender-live-bake-0.1.0/package",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
     "com.singularitygroup.hotreload": {
       "version": "file:com.singularitygroup.hotreload",
       "depth": 0,
@@ -190,6 +203,16 @@
         "com.unity.2d.tilemap.extras": "3.1.3",
         "com.unity.2d.aseprite": "1.1.9"
       }
+    },
+    "com.unity.formats.fbx": {
+      "version": "4.2.1",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.autodesk.fbx": "4.2.1",
+        "com.unity.timeline": "1.7.1"
+      },
+      "url": "https://packages.unity.com"
     },
     "com.unity.ide.rider": {
       "version": "3.0.40",
