@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "prefabName": "MaxExport",
+  "fbxAssetPath": "Assets/3dsmaxImport/Model/Incoming/MaxExport.fbx",
+  "shaderName": "PaiPai/BigLand/Lit_BigLand_OptimizePBR",
+  "importScale": 1.000000,
+  "exportTimeUtc": "2026-11-23T12:13:59.9749111Z",
+  "childNames": ["Box002","Box001"],
+  "materials": [
+    {
+      "slot": 0,
+      "name": "Default",
+      "tempMaterialName": "__MTU_M0000",
+      "baseColor": [0.800000,0.800000,0.800000,255.000000],
+      "metallic": 0.000000,
+      "roughness": 0.500000,
+      "normalStrength": 1.000000,
+      "emissionColor": [0.000000,0.000000,0.000000,255.000000],
+      "enableEmission": false,
+      "coverage": 0.000000,
+      "coverageNormalStrength": 1.000000,
+      "textures": [
+
+      ]
+    }
+  ]
+}
