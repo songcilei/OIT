@@ -23,8 +23,11 @@ MonoBehaviour:
   samples: 64
   margin: 16
   forceMainTexBaseColor: 0
+  skipDegenerateUV2: 0
+  skipUV2Validation: 0
   atlas: 1
   atlasResolution: 2048
   includeGlossy: 1
+  followBlenderOutput: 1
   format: PNG
-  lastImported: da6a0cdf66674ad6b8f6bc044c5408c5
+  lastImported: f2699b9dc8ea490c8badc724f5f5baad

@@ -8,7 +8,7 @@
       "url": "https://packages.unity.com"
     },
     "com.local.unity-blender-live-bake": {
-      "version": "file:C:/Users/Administrator/.codex/visualizations/2026/11/09/01a1beda-34a2-7e83-923a-feb58dd87932/UnityBlenderLiveBake/dist/UnityBlenderLiveBake-v0.1.0/dist/com.local.unity-blender-live-bake-0.1.0/package",
+      "version": "file:com.local.unity-blender-live-bake-0.2.3/package",
       "depth": 0,
       "source": "local",
       "dependencies": {}

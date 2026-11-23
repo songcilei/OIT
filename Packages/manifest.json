@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.local.unity-blender-live-bake": "file:C:/Users/Administrator/.codex/visualizations/2026/11/09/01a1beda-34a2-7e83-923a-feb58dd87932/UnityBlenderLiveBake/dist/UnityBlenderLiveBake-v0.1.0/dist/com.local.unity-blender-live-bake-0.1.0/package",
+    "com.local.unity-blender-live-bake": "file:com.local.unity-blender-live-bake-0.2.3/package",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.ai.navigation": "1.1.7",
     "com.unity.animation.rigging": "1.2.1",

@@ -1,0 +1,1 @@
+先解压外层 ZIP。Unity Package Manager 安装 TGZ；Blender Install from Disk 安装内层 ZIP。保存并重启 Blender 后 Start Live Receiver。默认跟随 Blender 输出设置：PNG 或单层 OpenEXR。
